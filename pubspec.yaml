@@ -1,8 +1,8 @@
 name: biokit
-description: A new Flutter package project.
+description: A toolkit for bioinformatic analysis.
 version: 0.0.1
-author:
-homepage:
+author: Ross Heaton <rossheat@protonmail.com>
+homepage: https://github.com/rossheat/biokit
 
 environment:
   sdk: ">=2.7.0 <3.0.0"

@@ -1,7 +1,6 @@
 library biokit;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+  sayILoveDNA(String name) {
+    return '$name loves DNA!';
+  }
+
