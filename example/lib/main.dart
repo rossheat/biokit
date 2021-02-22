@@ -24,7 +24,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    print(sayILoveDNA('Ross'));
+    String DNASequence = generateRandomNucleotideSequence(40, 'DNA');
+    String RNASequence = generateRandomNucleotideSequence(40, 'RNA');
+    print(validateNucleotideSequence(DNASequence, 'DNA'));
+    print(countNucleotideFrequency(DNASequence, 'DNA'));
+    print(transcribeDNAToRNA('GATGGAACTTGACTACGTAAATT'));
+    print(generateComplementaryStrand('AAAACCCGGT', 'DNA', true));
+    print(calculateGCContent('CCACCCTCGTGGTAGGCAGTAGGTGGAAT', 'DNA'));
   }
 
   @override
