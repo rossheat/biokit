@@ -1,6 +1,6 @@
 name: biokit
 description: A toolkit for bioinformatic analysis.
-version: 0.0.1
+version: 0.0.2
 author: Ross Heaton <rossheat@protonmail.com>
 homepage: https://github.com/rossheat/biokit
 
