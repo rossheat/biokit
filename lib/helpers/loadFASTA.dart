@@ -1,1 +1,0 @@
-loadFASTA(String path) {}

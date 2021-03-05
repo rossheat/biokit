@@ -1,12 +1,10 @@
+import 'package:meta/meta.dart';
+import 'package:biokit/helpers/validateNucSeq.dart';
 import '../constants/strings.dart';
-import '../helpers/validateNucleotideSequence.dart';
 
-String DNAToRNA(String nucleotideSequence) {
-  // Fix sequenceType = 'DNA'
+String dnaToRNA({@required String dnaSeq}) {
   Map<String, String> validationMap =
-      validateNucleotideSequence(nucleotideSequence = nucleotideSequence, kDNA);
-
-  String validDNASequence = validationMap[kSequence];
-
-  return validDNASequence.replaceAll(RegExp(r'T'), 'U');
+      validateNucSeq(nucSeq: dnaSeq, seqType: kDNA);
+  String validDNASeq = validationMap[kSeq];
+  return validDNASeq.replaceAll(RegExp(r'T'), 'U');
 }

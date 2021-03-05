@@ -1,18 +1,19 @@
+import 'package:meta/meta.dart';
+import 'package:biokit/helpers/validateNucSeq.dart';
 import '../constants/strings.dart';
-import '../helpers/validateNucleotideSequence.dart';
 
-double GCContent(String nucleotideSequence, String sequenceType) {
-  Map<String, String> validationMap = validateNucleotideSequence(
-      nucleotideSequence = nucleotideSequence, sequenceType = sequenceType);
+double gcContent({@required String nucSeq, @required String seqType}) {
+  Map<String, String> validationMap =
+      validateNucSeq(nucSeq: nucSeq, seqType: seqType);
 
-  String validNucleotideSequence = validationMap[kSequence];
+  String validNucleotideSequence = validationMap[kSeq];
 
-  int GCCount = 0;
+  int gcCount = 0;
   validNucleotideSequence.split('').forEach((nucleotide) {
-    nucleotide == 'G' || nucleotide == 'C' ? GCCount++ : null;
+    nucleotide == 'G' || nucleotide == 'C' ? gcCount++ : null;
   });
 
   return num.parse(
-    ((GCCount / validNucleotideSequence.length) * 100).toStringAsFixed(2),
+    ((gcCount / validNucleotideSequence.length) * 100).toStringAsFixed(2),
   );
 }
