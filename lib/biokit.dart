@@ -1,9 +1,9 @@
 library biokit;
 
-import 'package:biokit/seq.dart';
-export 'package:biokit/seq.dart';
+import 'package:biokit/exports.dart';
+export 'package:biokit/exports.dart';
 
-void main() async {
+void main() {
   DNA dna = DNA(seq: 'ATCG');
   print(dna.gcContent());
 }
