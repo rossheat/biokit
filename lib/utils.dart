@@ -5,7 +5,7 @@ import 'package:biokit/strings.dart';
 import 'package:meta/meta.dart';
 
 class Utils {
-  static Future<String> uniprotIdToFASTA({@required String uniprotId}) async {
+  static Future<String> uniprotIdToFASTA({required String uniprotId}) async {
     Uri uri = Uri.parse('http://www.uniprot.org/uniprot/$uniprotId.fasta');
 
     var request = await HttpClient().getUrl(uri);
@@ -17,8 +17,8 @@ class Utils {
     return 'Error retrieving protein with uniprot ID $uniprotId';
   }
 
-  static Future<List<Map<String, String>>> readFASTA({String path, String str}) async {
-    String contents = path == null ? str : await File(path).readAsString();
+  static Future<List<Map<String, String>>> fileToFASTA({required String path}) async {
+    String contents = await File(path).readAsString();
     List<String> lines = contents.split('\n');
     int seqCount = 0;
 
@@ -41,14 +41,14 @@ class Utils {
         currentMap[kId] = topLineList.first;
         currentMap[kDesc] = topLineList.sublist(1, topLineList.length).join();
       } else {
-        currentMap[kSeq] += line;
+        currentMap[kSeq] = currentMap[kSeq]! + line;
       }
     }
     fastaMaps.add(currentMap);
     return fastaMaps;
   }
 
-  static String motifToRe({@required motif}) {
+  static String motifToRe({required motif}) {
     String re = '';
 
     List<String> chars = motif.split('');

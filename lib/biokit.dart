@@ -5,5 +5,5 @@ export 'package:biokit/exports.dart';
 
 void main() {
   DNA dna = DNA(seq: 'ATCG');
-  print(dna.gcContent());
+  print(dna.freq());
 }

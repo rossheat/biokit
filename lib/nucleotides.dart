@@ -4,7 +4,7 @@ import 'package:biokit/structs.dart';
 import 'package:meta/meta.dart';
 
 class Nucleotides extends Sequence {
-  Nucleotides({@required String seq, @required String type}) : super(seq: seq, type: type);
+  Nucleotides({required String seq, required String type}) : super(seq: seq, type: type);
 
   /// The frequency of each nucleotide.
   Map<String, int> freq() => super.freq();
@@ -16,7 +16,7 @@ class Nucleotides extends Sequence {
     String aaSeq = '';
     for (var i = startIdx; i < seq.length - 2; i += 3) {
       String codon = seq.substring(i, i + 3);
-      aaSeq += this.type == kDNA ? Structs.dnaCodonToAA[codon] : Structs.rnaCodonToAA[codon];
+      aaSeq += this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
     }
     return {kAASeq: aaSeq, 'nucCount': seq.length - startIdx - 1, 'aaCount': aaSeq.length};
   }
@@ -25,14 +25,16 @@ class Nucleotides extends Sequence {
   /// Searches in batches of three nucleotides.
   /// If a codon is present but does not appear in a batch, it will not be detected.
   /// For example in ATGTCATGC, only 1 ATG is detected.
-  Map<String, int> codonFreq({@required String aminoAcid}) {
+  Map<String, int> codonFreq({required String aminoAcid}) {
     Map<String, int> codonFreqMap = {};
     for (var i = 0; i < this.len - 2; i += 3) {
       String codon = this.seq.substring(i, i + 3);
       String fetchedAminoAcid =
-          this.type == kDNA ? Structs.dnaCodonToAA[codon] : Structs.rnaCodonToAA[codon];
+          this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
       if (fetchedAminoAcid == aminoAcid.toUpperCase()) {
-        codonFreqMap[codon] == null ? codonFreqMap[codon] = 1 : codonFreqMap[codon]++;
+        codonFreqMap[codon] == null
+            ? codonFreqMap[codon] = 1
+            : codonFreqMap[codon] = codonFreqMap[codon]! + 1;
       }
     }
     return codonFreqMap;
@@ -56,7 +58,7 @@ class Nucleotides extends Sequence {
         gcCount++;
       }
     });
-    return num.parse(
+    return double.parse(
       ((gcCount / this.len) * 100).toStringAsFixed(2),
     );
   }
@@ -72,7 +74,7 @@ class Nucleotides extends Sequence {
     return readingFrames;
   }
 
-  List<String> readingFrameToProteins({@required String aaSeq}) {
+  List<String> readingFrameToProteins({required String aaSeq}) {
     List<String> currentProtein = [];
     List<String> proteins = [];
 

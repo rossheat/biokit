@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     DNA dna = DNA(seq: 'ATCG');
-    print(dna.gcContent());
+    print(dna.freq());
   }
 
   @override

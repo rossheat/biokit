@@ -4,7 +4,7 @@ import 'package:meta/meta.dart';
 import 'dart:math';
 
 class Peptide extends Sequence {
-  Peptide({@required String seq}) : super(seq: seq, type: 'pep');
+  Peptide({required String seq}) : super(seq: seq, type: 'pep');
 
   /// Calculates the frequency of each amino acid.
   Map<String, int> freq() => super.freq();
@@ -14,12 +14,12 @@ class Peptide extends Sequence {
     double totalMonoMass = 0;
 
     for (var aa in this.seq.split('')) {
-      totalMonoMass += Structs.aaToMonoMass[aa];
+      totalMonoMass += Structs.aaToMonoMass[aa]!;
     }
     return double.parse(totalMonoMass.toStringAsFixed(roundTo));
   }
 
-  static Peptide random({@required int len}) {
+  static Peptide random({required int len}) {
     Random _rand = Random();
     String aminoAcidsStr = Structs.aminoAcids.join();
     String seq = String.fromCharCodes(

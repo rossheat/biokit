@@ -5,7 +5,7 @@ import 'package:biokit/nucleotides.dart';
 import 'dart:math';
 
 class DNA extends Nucleotides {
-  DNA({@required String seq}) : super(seq: seq, type: 'dna');
+  DNA({required String seq}) : super(seq: seq, type: 'dna');
 
   /// Transcribes DNA to RNA.
   String transcribe() => this.seq.replaceAll('T', 'U');
@@ -41,7 +41,7 @@ class DNA extends Nucleotides {
     return restSiteSeqs;
   }
 
-  double tranRatio({@required DNA oSeq}) {
+  double tranRatio({required DNA oSeq}) {
     if (this.len != oSeq.len) {
       throw ('Unequal Sequence Lengths Error.');
     }
@@ -62,7 +62,7 @@ class DNA extends Nucleotides {
     return transitionCount / transversionCount;
   }
 
-  static DNA random({@required int len}) {
+  static DNA random({required int len}) {
     Random _rand = Random();
     String dnaNucsStr = Structs.dnaNucs.join();
     String seq = String.fromCharCodes(

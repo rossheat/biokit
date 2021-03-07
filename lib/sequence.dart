@@ -1,21 +1,21 @@
-import 'package:meta/meta.dart';
+import 'package:biokit/dna.dart';
+import 'package:biokit/rna.dart';
 import 'package:biokit/strings.dart';
 import 'package:biokit/structs.dart';
 import 'package:biokit/utils.dart';
 import 'errors.dart';
 
 class Sequence {
-  String _seq;
-  String _type;
-  int _len;
-
-  String name;
-  String id;
-  String desc;
+  late String _seq;
+  late String _type;
+  late int _len;
+  late String name;
+  late String id;
+  late String desc;
 
   Sequence(
-      {@required String seq,
-      @required String type,
+      {required String seq,
+      required String type,
       String name = 'Default name',
       String id = 'Default ID',
       String desc = 'Default description'}) {
@@ -26,7 +26,7 @@ class Sequence {
     this.desc = desc;
   }
 
-  String _validateType({@required String type}) {
+  String _validateType({required String type}) {
     String lType = type.toLowerCase();
     if (![kDNA, kRNA, kPep].contains(lType)) {
       throw (Errors.invalidType(type: lType));
@@ -34,7 +34,7 @@ class Sequence {
     return lType;
   }
 
-  String _validateSeq({@required String seq}) {
+  String _validateSeq({required String seq}) {
     int seqLen = seq.length;
     if (seqLen < 3) {
       throw ('Invalid Sequence Length Error. Sequence has less than three elements.');
@@ -92,7 +92,7 @@ class Sequence {
     Map<String, int> freqMap = {};
     this._seq.split('').forEach((mon) {
       if (freqMap.containsKey(mon)) {
-        freqMap[mon]++;
+        freqMap[mon] = freqMap[mon]! + 1;
       } else {
         freqMap[mon] = 1;
       }
@@ -101,7 +101,7 @@ class Sequence {
   }
 
   // For internal use only as part of the complementary function.
-  String reversed({@required String seq}) => seq.split('').reversed.join('');
+  String reversed({required String seq}) => seq.split('').reversed.join('');
 
   /// Reverses the sequence.
   String reverse() => this._seq.split('').reversed.join('');
@@ -129,7 +129,7 @@ class Sequence {
   }
 
   /// Finds the indices (zero-based) of a specified motif.
-  Map<String, dynamic> findMotif({@required String motif, overlap = true}) {
+  Map<String, dynamic> findMotif({required String motif, overlap = true}) {
     List<Map<String, dynamic>> matchData = [];
     Map<String, dynamic> matchMotifMap = {};
     String tempRegexMotif = Utils.motifToRe(motif: motif);
@@ -148,7 +148,7 @@ class Sequence {
   }
 
   // The number of positional differences.
-  int difference({@required Sequence oSeq}) {
+  int difference({required Sequence oSeq}) {
     if (this._len != oSeq.len) {
       throw ('Sequences must be of the same length to calculate difference.');
     }
@@ -166,13 +166,13 @@ class Sequence {
   }
 
   /// Removes all occurrences of the specified motif.
-  String splice({@required String motif}) {
+  String splice({required String motif}) {
     String vMotif = _validateSeq(seq: motif);
     return seq.replaceAll(vMotif, '');
   }
 
   // The longest shared motif.
-  String sharedMotif({@required oSeq}) {
+  String sharedMotif({required oSeq}) {
     if (this._type != oSeq.type) {
       throw ('Cannot find shared motif between ${this._type} and ${oSeq.type} sequence.');
     }

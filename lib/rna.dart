@@ -4,12 +4,12 @@ import 'package:biokit/structs.dart';
 import 'dart:math';
 
 class RNA extends Nucleotides {
-  RNA({@required String seq}) : super(seq: seq, type: 'rna');
+  RNA({required String seq}) : super(seq: seq, type: 'rna');
 
   /// Transcribes RNA back to DNA.
   String revTranscribe() => this.seq.replaceAll('U', 'T');
 
-  static RNA random({@required int len}) {
+  static RNA random({required int len}) {
     Random _rand = Random();
     String rnaNucsStr = Structs.rnaNucs.join();
     String seq = String.fromCharCodes(
