@@ -1,16 +1,19 @@
-# example
+<div style="text-align:center"><img src="https://biokit.org/img/banner.png" /></div>
 
-A new Flutter project.
+[BioKit](https://biokit.org) is a Dart package for Bioinformatics.
 
-## Getting Started
+## Installing 
+1. Add BioKit to your `pubspec.yaml` file as described [here](https://pub.dev/packages/biokit/install).
+```yaml 
+dependencies:
+  biokit: ^X.X.X # Replace with most recent version.
+```
 
-This project is a starting point for a Flutter application.
+2. Import the library. 
+```dart
+import 'package:biokit/biokit.dart';
+``` 
 
-A few resources to get you started if this is your first Flutter project:
+## Getting started
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+To get started, please [view the docs](https://biokit.org/docs). 

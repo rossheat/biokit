@@ -1,3 +1,7 @@
+## [0.0.4] - 2021-03-07
+* Refactored package into classes.
+* Opted in to null safety.
+
 ## [0.0.3] - 2021-03-01
 
 * Added hammingDistance function.
