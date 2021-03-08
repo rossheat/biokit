@@ -2,6 +2,18 @@
 
 [BioKit](https://biokit.org) is a Dart package for Bioinformatics.
 
+## Installing 
+1. Add BioKit to your `pubspec.yaml` file as described [here](https://pub.dev/packages/biokit/install).
+```yaml 
+dependencies:
+  biokit: ^X.X.X # Replace with most recent version.
+```
+
+2. Import the library. 
+```dart
+import 'package:biokit/biokit.dart';
+``` 
+
 ## Getting started
 
 To get started, please [view the docs](https://biokit.org/docs). 
@@ -28,3 +40,4 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+

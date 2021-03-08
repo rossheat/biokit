@@ -1,3 +1,6 @@
+## [0.0.5] - 2021-03-08
+* Added report function.
+
 ## [0.0.4] - 2021-03-07
 * Refactored package into classes.
 * Opted in to null safety.

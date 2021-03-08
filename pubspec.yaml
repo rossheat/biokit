@@ -1,6 +1,6 @@
 name: biokit
 description: BioKit is a Dart package for Bioinformatics.
-version: 0.0.4
+version: 0.0.5
 homepage: https://github.com/rossheat/biokit
 
 environment:

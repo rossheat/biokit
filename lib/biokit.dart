@@ -1,7 +1,9 @@
 library biokit;
 
-// import 'package:pdf/pdf.dart';
-// import 'package:pdf/widgets.dart' as pw;
+import 'dart:collection';
+
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -212,6 +214,7 @@ class Structs {
     "V": 99.06841,
     "W": 186.07931,
     "Y": 163.06333,
+    "X": 0,
   };
 }
 
@@ -298,18 +301,16 @@ class Sequence {
   late final String _seq;
   late final String _type;
   late final int _len;
-  String name;
-  String id;
-  String desc;
+  late String _name;
+  late String _id;
+  late String _desc;
 
-  Sequence._(
-      {required String seq,
-      required String type,
-      this.name = 'Default name',
-      this.id = 'Default ID',
-      this.desc = 'Default description'}) {
+  Sequence._({required String seq, required String type}) {
     this._type = _validateType(type: type);
     this._seq = _validateSeq(seq: seq);
+    this._name = 'Default name';
+    this._id = 'Default ID';
+    this._desc = 'Default description';
   }
 
   String _validateType({required String type}) {
@@ -322,8 +323,8 @@ class Sequence {
 
   String _validateSeq({required String seq}) {
     int seqLen = seq.length;
-    if (seqLen < 3) {
-      throw ('Invalid Sequence Length Error. Sequence has less than three elements.');
+    if (seqLen < 6) {
+      throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
     }
 
     String uSeq = seq.toUpperCase();
@@ -357,10 +358,10 @@ class Sequence {
     return {
       'seq': seq,
       'type': type,
-      'len': len,
-      'name': this.name,
-      'id': this.id,
-      'desc': this.desc
+      'monomers': _len,
+      'name': this._name,
+      'id': this._id,
+      'desc': this._desc
     };
   }
 
@@ -373,17 +374,75 @@ class Sequence {
 
   int get len => this._len;
 
+  String get name => this._name;
+
+  String get id => this._id;
+
+  String get desc => this._desc;
+
+  set name(String newName) {
+    if (newName.length < 2 || 25 > newName.length) {
+      throw ('Name Length Error. Name must between 2 and 25 characters.');
+    }
+    this._name = newName;
+  }
+
+  set id(String newId) {
+    if (newId.length < 2 || 30 > newId.length) {
+      throw ('ID Length Error. ID must between 2 and 30 characters.');
+    }
+    this._id = newId;
+  }
+
+  set desc(String newDesc) {
+    if (newDesc.length < 5 || 100 > newDesc.length) {
+      throw ('Description Length Error. Description must between 5 and 100 characters.');
+    }
+    this._desc = newDesc;
+  }
+
   /// Calculates the frequency of each monomer.
-  Map<String, int> freq() {
-    Map<String, int> freqMap = {};
+  Map<String, double> freq({bool norm = false, bool ignoreStopCodon = true}) {
+    Map<String, double> freqMap = {};
     this._seq.split('').forEach((mon) {
-      if (freqMap.containsKey(mon)) {
-        freqMap[mon] = freqMap[mon]! + 1;
+      if (this is Peptide && ignoreStopCodon) {
+        if (mon != 'X') {
+          if (freqMap.containsKey(mon)) {
+            freqMap[mon] = freqMap[mon]! + 1;
+          } else {
+            freqMap[mon] = 1;
+          }
+        }
       } else {
-        freqMap[mon] = 1;
+        if (freqMap.containsKey(mon)) {
+          freqMap[mon] = freqMap[mon]! + 1;
+        } else {
+          freqMap[mon] = 1;
+        }
       }
     });
-    return freqMap;
+
+    if (ignoreStopCodon & (this is Peptide)) {
+      if (norm) {
+        return freqMap.map(
+          (key, value) => MapEntry(
+            key,
+            double.parse(((value / _lenMinusStopAA(stopAA: 'X')) * 100).toStringAsFixed(1)),
+          ),
+        );
+      }
+      return freqMap;
+    } else {
+      if (norm) {
+        return freqMap.map(
+          (key, value) => MapEntry(
+            key,
+            double.parse(((value / this._len) * 100).toStringAsFixed(1)),
+          ),
+        );
+      }
+      return freqMap;
+    }
   }
 
   String _reversed({required String seq}) => seq.split('').reversed.join('');
@@ -418,7 +477,7 @@ class Sequence {
     List<Map<String, dynamic>> matchData = [];
     Map<String, dynamic> matchMotifMap = {};
     String tempRegexMotif = Utils.motifToRe(motif: motif);
-    RegExp regexMotif = overlap ? RegExp('(?=$tempRegexMotif)') : RegExp(tempRegexMotif);
+    RegExp regexMotif = overlap == true ? RegExp('(?=$tempRegexMotif)') : RegExp(tempRegexMotif);
     Iterable<RegExpMatch> allMatches = regexMotif.allMatches(seq);
     for (RegExpMatch match in allMatches) {
       matchData.add({
@@ -481,13 +540,26 @@ class Sequence {
     }
     return longestShared;
   }
+
+  double _norm({required int number, required int total, required int places}) =>
+      double.parse(((number / total) * 100).toStringAsFixed(1));
+
+  int _lenMinusStopAA({required String stopAA}) {
+    int tempLen = 0;
+    for (var aa in this._seq.split('')) {
+      if (aa != stopAA) {
+        tempLen++;
+      }
+    }
+    return tempLen;
+  }
 }
 
 class Nucleotides extends Sequence {
   Nucleotides._({required String seq, required String type}) : super._(seq: seq, type: type);
 
-  /// The frequency of each nucleotide.
-  Map<String, int> freq() => super.freq();
+  // /// The frequency of each nucleotide.
+  // Map<String, double> freq({bool norm = false}) => super.freq(norm: norm);
 
   /// Translates the nucleotides to amino acids.
   Map<String, dynamic> translate({revComp = false, startIdx = 0}) {
@@ -505,19 +577,30 @@ class Nucleotides extends Sequence {
   /// Searches in batches of three nucleotides.
   /// If a codon is present but does not appear in a batch, it will not be detected.
   /// For example in ATGTCATGC, only 1 ATG is detected.
-  Map<String, int> codonFreq({required String aminoAcid}) {
-    Map<String, int> codonFreqMap = {};
-    for (var i = 0; i < this.len - 2; i += 3) {
-      String codon = this.seq.substring(i, i + 3);
-      String fetchedAminoAcid =
-          this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
-      if (fetchedAminoAcid == aminoAcid.toUpperCase()) {
-        codonFreqMap[codon] == null
-            ? codonFreqMap[codon] = 1
-            : codonFreqMap[codon] = codonFreqMap[codon]! + 1;
+  // Map<String, int> codonFreq({required String aminoAcid}) {
+  //   Map<String, int> codonFreqMap = {};
+  //   for (var i = 0; i < this._len - 2; i += 3) {
+  //     String codon = this.seq.substring(i, i + 3);
+  //     String fetchedAminoAcid =
+  //         this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
+  //     if (fetchedAminoAcid == aminoAcid.toUpperCase()) {
+  //       codonFreqMap[codon] == null
+  //           ? codonFreqMap[codon] = 1
+  //           : codonFreqMap[codon] = codonFreqMap[codon]! + 1;
+  //     }
+  //   }
+  //   return codonFreqMap;
+  // }
+
+  int codonFreq({required String codon}) {
+    int codonFreq = 0;
+    for (var i = 0; i < this._len - 2; i += 3) {
+      String fetchedCodon = this._seq.substring(i, i + 3);
+      if (codon == fetchedCodon) {
+        codonFreq++;
       }
     }
-    return codonFreqMap;
+    return codonFreq;
   }
 
   /// The complementary strand.
@@ -539,7 +622,7 @@ class Nucleotides extends Sequence {
       }
     });
     return double.parse(
-      ((gcCount / this.len) * 100).toStringAsFixed(2),
+      ((gcCount / this._len) * 100).toStringAsFixed(2),
     );
   }
 
@@ -593,6 +676,14 @@ class Nucleotides extends Sequence {
     }
     return proteins;
   }
+
+  double molWeight() => this._len * 0.33; // kDa
+
+  double doubleHelixMolWeight() => molWeight() * 2; // kDa
+
+  double doubleHexlixTurns() => this._len / 10; // turns
+
+  double doubleHelixGeoLen() => this._len * 0.34; //nm
 }
 
 class DNA extends Nucleotides {
@@ -633,7 +724,7 @@ class DNA extends Nucleotides {
   }
 
   double tranRatio({required DNA oSeq}) {
-    if (this.len != oSeq.len) {
+    if (this._len != oSeq._len) {
       throw ('Unequal Sequence Lengths Error.');
     }
 
@@ -649,7 +740,6 @@ class DNA extends Nucleotides {
         }
       }
     });
-
     return transitionCount / transversionCount;
   }
 
@@ -667,31 +757,500 @@ class DNA extends Nucleotides {
     return DNA(seq: seq);
   }
 
-  // _reportText() {}
+  Future<void> report(
+      {required String outputPath,
+      required String creatorName,
+      required String reportTitle}) async {
+    final DateTime now = new DateTime.now();
+    final DateTime date = new DateTime(now.year, now.month, now.day);
 
-  // _reportCalcs() {}
+    final int monomers = this._len;
+    final double gcCon = gcContent();
+    final double mWeight = molWeight();
+    final double turns = doubleHexlixTurns();
+    final double geoLength = doubleHelixGeoLen();
+    final Map nucFreqCount = freq();
+    final Map nucFreqPerc = freq(norm: true);
 
-  // _reportCharts() {}
+    // DNA
+    const dnaRightTableHeaders = ['Nucleotide', 'Count', 'Percent Total (%)'];
+    var dnaRightTableData = [
+      ['A', nucFreqCount['A'].toStringAsFixed(0), nucFreqPerc['A']],
+      ['T', nucFreqCount['T'].toStringAsFixed(0), nucFreqPerc['T']],
+      ['G', nucFreqCount['G'].toStringAsFixed(0), nucFreqPerc['G']],
+      ['C', nucFreqCount['C'].toStringAsFixed(0), nucFreqPerc['C']],
+    ];
+    var dnaTopTableHeaders = [
+      'Nucelotides',
+      'GC Content (%)',
+      'mWeight (kDa)',
+      'DHelix Length (nm)',
+      'DHelix Turns'
+    ];
+    var dnaTopTableData = [
+      monomers,
+      gcCon,
+      mWeight.toStringAsFixed(1),
+      geoLength.toStringAsFixed(1),
+      turns.toStringAsFixed(1),
+    ];
 
-  // Future<void> report({required String outputPath, required String name}) async {
-  //   Peptide(seq: '');
+    // RNA
+    RNA rna = RNA(seq: transcribe());
 
-  //   final pdf = pw.Document();
+    final int numOfCodons = (this._len / 3).floor();
+    final int aug = rna.codonFreq(codon: 'AUG');
+    final int uag = rna.codonFreq(codon: 'UAG');
+    final int uaa = rna.codonFreq(codon: 'UAA');
+    final int uga = rna.codonFreq(codon: 'UGA');
+    final int other = numOfCodons - aug - uag - uaa - uga;
 
-  //   pdf.addPage(
-  //     pw.Page(
-  //       pageFormat: PdfPageFormat.a4,
-  //       build: (pw.Context context) {
-  //         return pw.Center(
-  //           child: pw.Text("Hello World"),
-  //         ); // Center
-  //       },
-  //     ),
-  //   );
+    var rnaTopTableHeaders = [
+      'Codons',
+      'Total Start Codons',
+      'Total Stop Codons',
+    ];
+    var rnaTopTableData = [
+      numOfCodons,
+      aug,
+      uag + uaa + uga,
+    ];
 
-  //   final file = File("$outputPath/$name.pdf");
-  //   await file.writeAsBytes(await pdf.save());
-  // }
+    const rnaRightTableHeaders = ['Codon', 'Count', 'Percent Total (%)'];
+    var rnaRightTableData = [
+      ['Other', other, _norm(number: other, total: numOfCodons, places: 1)],
+      ['AUG', aug, _norm(number: aug, total: numOfCodons, places: 1)],
+      ['UAG', uag, _norm(number: uag, total: numOfCodons, places: 1)],
+      ['UAA', uaa, _norm(number: uaa, total: numOfCodons, places: 1)],
+      ['UGA', uga, _norm(number: uga, total: numOfCodons, places: 1)],
+    ];
+
+    // Peptide
+    Peptide pep = Peptide(seq: translate()[kAASeq]);
+
+    var peptideTopTableHeaders = [
+      'Amino Acids',
+      'Monoisotopic Mass (kDa)',
+    ];
+    var peptideTopTableData = [
+      pep._lenMinusStopAA(stopAA: 'X'),
+      pep.monoMass(roundTo: 1, kDa: true),
+    ];
+
+    Map<String, double> aaFreq = pep.freq();
+    Map<String, double> aaFreqPct = pep.freq(norm: true);
+
+    var sortedKeys = aaFreq.keys.toList(growable: false)
+      ..sort((k2, k1) => aaFreq[k1]!.compareTo(aaFreq[k2]!));
+    LinkedHashMap sortedMap =
+        new LinkedHashMap.fromIterable(sortedKeys, key: (k) => k, value: (k) => aaFreq[k]);
+
+    const pepRightTableHeaders = ['Top 5 AAs', 'Count', 'Percent Total (%)'];
+    List<List<dynamic>> pepRightTableData = [];
+    for (var key in sortedMap.keys.take(5)) {
+      pepRightTableData.add([
+        key,
+        aaFreq[key]!.toInt(),
+        aaFreqPct[key],
+      ]);
+    }
+
+    final baseColor = PdfColors.cyan;
+    final document = pw.Document();
+
+    document.addPage(
+      pw.Page(
+        pageFormat: null,
+        build: (context) {
+          final dnaBarChart = pw.Chart(
+            left: pw.Container(
+              alignment: pw.Alignment.topCenter,
+              margin: const pw.EdgeInsets.only(right: 5, top: 10),
+              child: pw.Transform.rotateBox(
+                angle: pi / 2,
+                child: pw.Text('Percent Total (%)'),
+              ),
+            ),
+            grid: pw.CartesianGrid(
+              xAxis: pw.FixedAxis.fromStrings(
+                List<String>.generate(
+                    dnaRightTableData.length,
+                    // ignore: avoid_as
+                    (index) => dnaRightTableData[index][0] as String),
+                marginStart: 30,
+                marginEnd: 30,
+                ticks: true,
+              ),
+              yAxis: pw.FixedAxis(
+                [0, 20, 40, 60, 80, 100],
+                format: (v) => '$v\%',
+                divisions: true,
+              ),
+            ),
+            datasets: [
+              pw.BarDataSet(
+                color: baseColor,
+                legend: dnaRightTableHeaders[2],
+                width: 30,
+                offset: 0,
+                borderColor: baseColor,
+                data: List<pw.LineChartValue>.generate(
+                  dnaRightTableData.length,
+                  (i) {
+                    // ignore: avoid_as
+                    final v = dnaRightTableData[i][2] as num;
+                    return pw.LineChartValue(i.toDouble(), v.toDouble());
+                  },
+                ),
+              ),
+            ],
+          );
+
+          final dnaRightTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            border: null,
+            headers: dnaRightTableHeaders,
+            data: dnaRightTableData,
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          final dnaTopTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+              3: pw.Alignment.center,
+              4: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+              3: pw.Alignment.center,
+              4: pw.Alignment.center,
+            },
+            border: null,
+            headers: dnaTopTableHeaders,
+            data: [dnaTopTableData],
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          final rnaTopTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+              3: pw.Alignment.center,
+              4: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+              3: pw.Alignment.center,
+              4: pw.Alignment.center,
+            },
+            border: null,
+            headers: rnaTopTableHeaders,
+            data: [rnaTopTableData],
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          final rnaBarChart = pw.Chart(
+            left: pw.Container(
+              alignment: pw.Alignment.topCenter,
+              margin: const pw.EdgeInsets.only(right: 5, top: 10),
+              child: pw.Transform.rotateBox(
+                angle: pi / 2,
+                child: pw.Text('Percent Total (%)'),
+              ),
+            ),
+            grid: pw.CartesianGrid(
+              xAxis: pw.FixedAxis.fromStrings(
+                List<String>.generate(
+                    rnaRightTableData.length,
+                    // ignore: avoid_as
+                    (index) => rnaRightTableData[index][0] as String),
+                marginStart: 30,
+                marginEnd: 30,
+                ticks: true,
+              ),
+              yAxis: pw.FixedAxis(
+                [0, 20, 40, 60, 80, 100],
+                format: (v) => '$v\%',
+                divisions: true,
+              ),
+            ),
+            datasets: [
+              pw.BarDataSet(
+                color: baseColor,
+                legend: rnaRightTableHeaders[2],
+                width: 30,
+                offset: 0,
+                borderColor: baseColor,
+                data: List<pw.LineChartValue>.generate(
+                  rnaRightTableData.length,
+                  (i) {
+                    // ignore: avoid_as
+                    final v = rnaRightTableData[i][2] as num;
+                    return pw.LineChartValue(i.toDouble(), v.toDouble());
+                  },
+                ),
+              ),
+            ],
+          );
+
+          final rnaRightTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            border: null,
+            headers: rnaRightTableHeaders,
+            data: rnaRightTableData,
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          final pepTopTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+            },
+            border: null,
+            headers: peptideTopTableHeaders,
+            data: [peptideTopTableData],
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          final pepBarChart = pw.Chart(
+            left: pw.Container(
+              alignment: pw.Alignment.topCenter,
+              margin: const pw.EdgeInsets.only(right: 5, top: 10),
+              child: pw.Transform.rotateBox(
+                angle: pi / 2,
+                child: pw.Text('Percent Total (%)'),
+              ),
+            ),
+            grid: pw.CartesianGrid(
+              xAxis: pw.FixedAxis.fromStrings(
+                List<String>.generate(
+                    pepRightTableData.length,
+                    // ignore: avoid_as
+                    (index) => pepRightTableData[index][0] as String),
+                marginStart: 30,
+                marginEnd: 30,
+                ticks: true,
+              ),
+              yAxis: pw.FixedAxis(
+                [0, 20, 40, 60, 80, 100],
+                format: (v) => '$v\%',
+                divisions: true,
+              ),
+            ),
+            datasets: [
+              pw.BarDataSet(
+                color: baseColor,
+                legend: pepRightTableHeaders[2],
+                width: 25,
+                offset: 0,
+                borderColor: baseColor,
+                data: List<pw.LineChartValue>.generate(
+                  pepRightTableData.length,
+                  (i) {
+                    // ignore: avoid_as
+                    final v = pepRightTableData[i][2] as num;
+                    return pw.LineChartValue(i.toDouble(), v.toDouble());
+                  },
+                ),
+              ),
+            ],
+          );
+
+          final pepRightTable = pw.Table.fromTextArray(
+            headerAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            cellAlignments: {
+              0: pw.Alignment.center,
+              1: pw.Alignment.center,
+              2: pw.Alignment.center,
+            },
+            border: null,
+            headers: pepRightTableHeaders,
+            data: pepRightTableData,
+            headerStyle: pw.TextStyle(
+              color: PdfColors.white,
+              fontWeight: pw.FontWeight.bold,
+            ),
+            headerDecoration: pw.BoxDecoration(
+              color: baseColor,
+            ),
+            rowDecoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(
+                  color: baseColor,
+                  width: .5,
+                ),
+              ),
+            ),
+          );
+
+          return pw.Column(
+            children: [
+              pw.Text(
+                reportTitle,
+                style: pw.TextStyle(
+                  fontSize: 25,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'by $creatorName on ${date.day}/${date.month}/${date.year} with BioKit.org',
+                style: pw.TextStyle(color: PdfColors.grey, fontSize: 11),
+              ),
+              pw.SizedBox(height: 15),
+              pw.Row(children: [
+                pw.Text(id),
+                pw.Text(name),
+                pw.Text('${this.seq.substring(0, 3)} ... ${seq.substring(this.len - 3, this.len)}')
+              ], mainAxisAlignment: pw.MainAxisAlignment.spaceBetween),
+              // DNA
+              pw.SizedBox(height: 15),
+              dnaTopTable,
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                      child: pw.Expanded(flex: 1, child: dnaBarChart), height: 136, width: 240),
+                  pw.SizedBox(width: 10),
+                  pw.Expanded(flex: 1, child: dnaRightTable),
+                ],
+              ),
+              //RNA
+              pw.SizedBox(height: 20),
+              rnaTopTable,
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                      child: pw.Expanded(flex: 1, child: rnaBarChart), height: 160, width: 270),
+                  pw.SizedBox(width: 10),
+                  pw.Expanded(flex: 1, child: rnaRightTable),
+                ],
+              ),
+              //Peptide
+              pw.SizedBox(height: 20),
+              pepTopTable,
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                      child: pw.Expanded(flex: 1, child: pepBarChart), height: 160, width: 240),
+                  pw.SizedBox(width: 10),
+                  pw.Expanded(flex: 1, child: pepRightTable),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    String raTitle = reportTitle.toLowerCase().trim();
+    final file = File("$outputPath/$raTitle.pdf");
+    await file.writeAsBytes(await document.save());
+  }
 }
 
 class RNA extends Nucleotides {
@@ -718,15 +1277,14 @@ class RNA extends Nucleotides {
 class Peptide extends Sequence {
   Peptide({required String seq}) : super._(seq: seq, type: 'pep');
 
-  /// Calculate the frequency of each amino acid.
-  Map<String, int> freq() => super.freq();
-
   /// Calculate the Monoisotopic Mass.
-  double monoMass({int roundTo = 3}) {
+  double monoMass({int roundTo = 3, kDa = false}) {
     double totalMonoMass = 0;
-
     for (var aa in this.seq.split('')) {
       totalMonoMass += Structs.aaToMonoMass[aa]!;
+    }
+    if (kDa) {
+      return double.parse((totalMonoMass / 1000).toStringAsFixed(roundTo));
     }
     return double.parse(totalMonoMass.toStringAsFixed(roundTo));
   }
@@ -747,7 +1305,11 @@ class Peptide extends Sequence {
 }
 
 void main() async {
-  // DNA dna = DNA(seq: 'ATGC');
-  // RNA rna = RNA(seq: 'AUGC');
-  // Peptide pep = Peptide(seq: 'MSKA');
+  // List<Map<String, String>> dnaSeqs = await Utils.readFASTA(path: 'example_dna_fasta.txt');
+  // DNA dna = DNA(seq: dnaSeqs.first['seq']!);
+  // dna.report(
+  //   outputPath: '../deliverables',
+  //   reportTitle: 'DNA Analysis Report',
+  //   creatorName: 'John Doe',
+  // );
 }
