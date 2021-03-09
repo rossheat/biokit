@@ -1,3 +1,6 @@
+## [0.0.7] - 2021-03-09
+* Added toFASTA function.
+
 ## [0.0.6] - 2021-03-09
 * Decomposed Structs class.
 

@@ -1,19 +1,19 @@
 name: biokit
 description: BioKit is a Dart package for Bioinformatics.
-version: 0.0.6
+version: 0.0.7
 homepage: https://github.com/rossheat/biokit
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
-  flutter: ">=1.17.0"
+  # flutter: ">=1.17.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
+  # flutter:
+  #   sdk: flutter
   pdf: ^3.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-flutter:
+# flutter:

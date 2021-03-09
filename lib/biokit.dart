@@ -230,7 +230,7 @@ const Map<String, String> rnaCodonToAA = {
   "GGG": "G"
 };
 
-// Amino acids their monoisotopic mass.
+/// Amino acids and their monoisotopic mass.
 const Map<String, double> aaToMonoMass = {
   "A": 71.03711,
   "C": 103.00919,
@@ -256,15 +256,41 @@ const Map<String, double> aaToMonoMass = {
 };
 
 /// A collection of error functions.
+///
+/// @nodoc
 class Errors {
-  /// Returns sequence error message.
-  static String invalidSeq({required String mon, required int idx, required String type}) {
-    return "Invalid ${type.toUpperCase()} Sequence Error. Character '$mon' found at index position $idx (zero-based) is not a valid ${type.toUpperCase()} monomer.";
+  /// Throws a sequence error.
+  static void invalidSeq({required String mon, required int idx, required String type}) {
+    throw ("Invalid ${type.toUpperCase()} Sequence Error. Character '$mon' found at index position $idx (zero-based) is not a valid ${type.toUpperCase()} monomer.");
   }
 
-  /// Returns a sequence type error message.
-  static String invalidType({required String type}) {
-    return "Invalid Sequence Type Error. '$type' is not a valid sequence type. Please enter the argument 'dna', 'rna' or 'pep' for [type].";
+  /// Throws a sequence type error.
+  static void invalidType({required String type}) {
+    throw ("Invalid Sequence Type Error. '$type' is not a valid sequence type. Please enter the argument 'dna', 'rna' or 'pep' for [type].");
+  }
+
+  /// Throws an invalid FASTA arguement error..
+  static void invalidFASTAArgs() {
+    throw ('Invalid readFASTA arguement specification. Please specify either a [path] or a [str] in which to read FASTA formatted data from.');
+  }
+
+  /// Throws an unequal sequence type error.
+  static void unequalSeqTypes({required String func}) {
+    throw ('$func function requires sequences must be of the same type.');
+  }
+
+  /// Throws an unequal sequence length error.
+  static void unequalSeqLens({required String func}) {
+    throw ('$func function requires sequences must be of the same length.');
+  }
+
+  /// Throws an invalid sequence length error.
+  static void invalidSeqLen({required String param, required int min, int? max}) {
+    if (max != null) {
+      throw ('$param must have between $min and $max characters.');
+    } else {
+      throw ('$param must have $min or more characters.');
+    }
   }
 }
 
@@ -289,16 +315,16 @@ class Utils {
   ///
   /// Each map contains a sequence `seq`, ID `id`, and description `desc`.
   static Future<List<Map<String, String>>> readFASTA({String? path, String? str}) async {
-    String contents;
+    String? contents;
     if (path != null) {
       contents = await File(path).readAsString();
     } else if (str != null) {
       contents = str;
     } else {
-      throw ('Invalid readFASTA argument specification. Please specify either a [path] or a [str] in which to read FASTA data from.');
+      Errors.invalidFASTAArgs();
     }
 
-    List<String> lines = contents.split('\n');
+    List<String> lines = contents!.split('\n');
     int seqCount = 0;
 
     List<Map<String, String>> fastaMaps = [];
@@ -388,8 +414,9 @@ class Sequence {
   /// Validates and returns a sequence [type].
   String _validateType({required String type}) {
     String lType = type.toLowerCase();
+    // Checks if the lowercased type is present in the list
     if (![kDNA, kRNA, kPep].contains(lType)) {
-      throw (Errors.invalidType(type: lType));
+      Errors.invalidType(type: lType);
     }
     return lType;
   }
@@ -398,32 +425,33 @@ class Sequence {
   String _validateSeq({required String seq}) {
     int seqLen = seq.length;
 
-    /// Peptides must be at least one monomer long.
     if (this is Peptide) {
+      // Peptides must be at least one monomer long.
       if (seqLen < 1) {
-        throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
+        Errors.invalidSeqLen(param: 'Peptide', min: 1);
       }
-
-      /// Nucleotides must at least 6 monomers long.
     } else {
+      // Nucleotides must at least 6 monomers long.
       if (seqLen < 6) {
-        throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
+        Errors.invalidSeqLen(param: 'Nucelotides', min: 6);
       }
     }
 
     String uSeq = seq.toUpperCase();
+
+    // Enumerate over each element and confirm it is valid for its type.
     uSeq.split('').asMap().forEach((idx, mon) {
       if (this._type == kDNA) {
         if (!dnaNucs.contains(mon)) {
-          throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
+          Errors.invalidSeq(mon: mon, idx: idx, type: this._type);
         }
       } else if (this.type == kRNA) {
         if (!rnaNucs.contains(mon)) {
-          throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
+          Errors.invalidSeq(mon: mon, idx: idx, type: this._type);
         }
       } else {
         if (!aminoAcids.contains(mon)) {
-          throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
+          Errors.invalidSeq(mon: mon, idx: idx, type: this._type);
         }
       }
     });
@@ -434,7 +462,7 @@ class Sequence {
   /// Returns the `String` sequence combination between this and [oSeq].
   String operator +(Sequence oSeq) {
     if (this._type != oSeq.type) {
-      throw ('Cannot add ${this._type} and ${oSeq.type} sequence.');
+      Errors.unequalSeqTypes(func: '+');
     }
     return this._seq + oSeq.seq;
   }
@@ -476,7 +504,7 @@ class Sequence {
   /// Sets the sequence name to [newName].
   set name(String newName) {
     if (newName.length < 2 || 25 > newName.length) {
-      throw ('Name Length Error. Name must between 2 and 25 characters.');
+      Errors.invalidSeqLen(param: 'Name', min: 2, max: 25);
     }
     this._name = newName;
   }
@@ -484,7 +512,7 @@ class Sequence {
   /// Sets the sequence ID to [newId].
   set id(String newId) {
     if (newId.length < 2 || 30 > newId.length) {
-      throw ('ID Length Error. ID must between 2 and 30 characters.');
+      Errors.invalidSeqLen(param: 'ID', min: 2, max: 30);
     }
     this._id = newId;
   }
@@ -492,7 +520,7 @@ class Sequence {
   /// Sets the sequence description to [newDesc].
   set desc(String newDesc) {
     if (newDesc.length < 5 || 100 > newDesc.length) {
-      throw ('Description Length Error. Description must between 5 and 100 characters.');
+      Errors.invalidSeqLen(param: 'Description', min: 5, max: 100);
     }
     this._desc = newDesc;
   }
@@ -504,6 +532,9 @@ class Sequence {
   Map<String, double> freq({bool norm = false, bool ignoreStopCodon = true}) {
     Map<String, double> freqMap = {};
     this._seq.split('').forEach((mon) {
+      // If this is a peptide and [ignoreStopCodon] is `true`, we want
+      // to perform the calulation without taking the stop codon product
+      // X into consideration.
       if (this is Peptide && ignoreStopCodon) {
         if (mon != 'X') {
           if (freqMap.containsKey(mon)) {
@@ -512,6 +543,8 @@ class Sequence {
             freqMap[mon] = 1;
           }
         }
+        // If either this is not a Peptide or [ignoreStopCodon] is `false`,
+        // then proceed without checking if the character is X.
       } else {
         if (freqMap.containsKey(mon)) {
           freqMap[mon] = freqMap[mon]! + 1;
@@ -521,18 +554,22 @@ class Sequence {
       }
     });
 
-    if (ignoreStopCodon & (this is Peptide)) {
+    if (this is Peptide && ignoreStopCodon) {
       if (norm) {
+        // The sequence is a Peptide and [ignoreStopCodon] is `true` and [norm] is `true`.
+        // Return normalised results based on length without the X character.
         return freqMap.map(
           (key, value) => MapEntry(
             key,
+            // Use the length of the peptide in absence of the X character.
             double.parse(((value / lenMinus(monomer: 'X')) * 100).toStringAsFixed(1)),
           ),
         );
       }
-      return freqMap;
+      // The sequence is not a Peptide or [ignoreStopCodon] is `false`.
     } else {
       if (norm) {
+        // Return normalised results based on sequence length.
         return freqMap.map(
           (key, value) => MapEntry(
             key,
@@ -540,8 +577,10 @@ class Sequence {
           ),
         );
       }
-      return freqMap;
     }
+    // The sequence is not a Peptide or [ignoreStopCodon] is `false`, or [norm] is `false`.
+    // Return non-normalised results based on sequence length.
+    return freqMap;
   }
 
   /// Returns the reversed version of this sequence.
@@ -553,9 +592,17 @@ class Sequence {
   /// Returns every possible combination of this sequence.
   ///
   /// Sort the result from longest to shortest by setting [sorted] to `true`.
+  ///
+  /// ```dart
+  /// Peptide pep = Peptide(seq: 'ATG');
+  /// pep.combinations()
+  /// // > [A, AT, ATG, T, TG];
+  /// ```
   List<String> combinations({sorted = false}) {
     List<String> listSeq = this._seq.split("");
     List<String> combinations = [];
+
+    // Generates all possible combinations of this sequence.
     for (int i = 0; i < listSeq.length; i++) {
       if (i != listSeq.length - 1) {
         combinations.add(listSeq[i]);
@@ -567,7 +614,7 @@ class Sequence {
       }
     }
     if (sorted) {
-      /// Sorts with longest combination first.
+      // Sorts with longest combination first.
       combinations.sort((b, a) => a.length.compareTo(b.length));
       return combinations;
     }
@@ -580,8 +627,13 @@ class Sequence {
   Map<String, dynamic> findMotif({required String motif, overlap = true}) {
     List<Map<String, dynamic>> matchData = [];
     Map<String, dynamic> matchMotifMap = {};
+
+    // 'ATGC' -> 'ATGC', 'N{P}[ST]{P}' -> 'N[^P][S|T|][^P]'
     String tempRegexMotif = Utils.motifToRe(motif: motif);
+
+    // ?= is the regex lookahead operator and allows for matches to overlap.
     RegExp regexMotif = overlap == true ? RegExp('(?=$tempRegexMotif)') : RegExp(tempRegexMotif);
+
     Iterable<RegExpMatch> allMatches = regexMotif.allMatches(seq);
     for (RegExpMatch match in allMatches) {
       matchData.add({
@@ -598,10 +650,10 @@ class Sequence {
   /// Returns the number of monomer differences between this sequence and [oSeq].
   int difference({required Sequence oSeq}) {
     if (this._len != oSeq.len) {
-      throw ('Sequences must be of the same length to calculate difference.');
+      Errors.unequalSeqLens(func: 'difference');
     }
     if (this._type != oSeq.type) {
-      throw ('Sequences must be of the same type to calculate difference.');
+      Errors.unequalSeqTypes(func: 'difference');
     }
 
     int differenceCount = 0;
@@ -622,20 +674,25 @@ class Sequence {
   /// Returns the longest shared motif between this sequence and [oSeq].
   String sharedMotif({required Sequence oSeq}) {
     if (this._type != oSeq.type) {
-      throw ('Cannot find shared motif between ${this._type} and ${oSeq.type} sequence.');
+      Errors.unequalSeqTypes(func: 'sharedMotif');
     }
-
+    // Return all possible combinates of this sequence sorted from longest to shortest.
     List<String> combos = combinations(sorted: true);
 
     String longestShared = '';
 
     for (var comb in combos) {
-      bool allMatches = true;
+      // Assume the combination is contained in the other sequence unless set otherwise.
+      bool isMatch = true;
       if (!oSeq.seq.contains(comb)) {
-        allMatches = false;
+        // The combination is not contained in the other sequence.
+        isMatch = false;
         break;
       }
-      if (allMatches) {
+      if (isMatch) {
+        // The combination must be present in the other sequence.
+        // Because the combinations were sorted from longest to
+        // shortest, this must be the longest shared motif.
         longestShared = comb;
         break;
       }
@@ -649,13 +706,37 @@ class Sequence {
 
   /// Returns the length of this sequence with [monomer] removed.
   int lenMinus({required String monomer}) {
-    int minusLen = 0;
+    int newLen = 0;
     for (var mon in this._seq.split('')) {
       if (mon != monomer) {
-        minusLen++;
+        newLen++;
       }
     }
-    return minusLen;
+    return newLen;
+  }
+
+  /// Saves this sequence to a local file in FASTA format.
+  ///
+  /// ```dart
+  /// dna.toFASTA(outputPath: '../deliverables', filename: 'fasta_output');
+  /// ```
+  Future<void> toFASTA({required String outputPath, required String filename}) async {
+    final String metadata = '>${this._id} ${this._desc}\n';
+    String seq = '';
+    int lineLen = 0;
+    for (var mon in this._seq.split('')) {
+      lineLen++;
+      // Each sequence line should be at most 60 characters long.
+      if (lineLen % 60 == 0) {
+        // [lineLen] is a multiple of 60 so start a new line.
+        seq += '$mon\n';
+      } else {
+        seq += '$mon';
+      }
+    }
+    final String fileData = metadata + seq;
+    final String filen = filename.toLowerCase().trim();
+    await File('$outputPath/$filen.txt').writeAsString(fileData);
   }
 }
 
@@ -669,11 +750,15 @@ class Nucleotides extends Sequence {
   /// Return the reverse complementary strand by setting [revComp] to `true`.
   /// Alter the starting indexing by setting [startIdx].
   Map<String, dynamic> translate({revComp = false, startIdx = 0}) {
+    // If [revComp] is `true`, return the reverse complementary sequence to this sequence.
     String seq = revComp ? complementary(rev: true) : this.seq;
 
     String aaSeq = '';
+    // Loop through the sequence in batches of three characters at a time.
     for (var i = startIdx; i < seq.length - 2; i += 3) {
+      // Grab three characters from the sequence.
       String codon = seq.substring(i, i + 3);
+      // Retrive the matching amino acid from the correct codon table based on this sequence type.
       aaSeq += this.type == kDNA ? dnaCodonToAA[codon]! : rnaCodonToAA[codon]!;
     }
     return {kAASeq: aaSeq, 'nucCount': seq.length - startIdx - 1, 'aaCount': aaSeq.length};
@@ -685,7 +770,9 @@ class Nucleotides extends Sequence {
   /// The exact [codon] must be present in a batch to be detected.
   int codonFreq({required String codon}) {
     int codonFreq = 0;
+    // Loop through the sequence in batches of three characters at a time.
     for (var i = 0; i < this._len - 2; i += 3) {
+      // Grab three characters from the sequence and check if they match [codon].
       String fetchedCodon = this._seq.substring(i, i + 3);
       if (codon == fetchedCodon) {
         codonFreq++;
@@ -724,7 +811,9 @@ class Nucleotides extends Sequence {
     List<String> readingFrames = [];
 
     for (var i = 0; i < 3; i++) {
+      // Generate three forwards reading frames.
       readingFrames.add(translate(startIdx: i)[kAASeq]);
+      // Generate three backwards reading frames.
       readingFrames.add(translate(revComp: true, startIdx: i)[kAASeq]);
     }
     return readingFrames;
@@ -759,24 +848,29 @@ class Nucleotides extends Sequence {
 
   /// Returns proteins from this sequence.
   List<String> proteins({bool unique = false}) {
+    // Generate siz reading frames from this sequence.
     List<String> frames = readingFrames();
     List<String> proteins = [];
+    // Loop through each of the six reading frames.
     for (var frame in frames) {
+      // Translate the reading frame into protein(s).
       List<String> tempProteins = readingFrameToProteins(aaSeq: frame);
       if (proteins != []) {
+        // If atleast one protein has been generated, at it/them to [proteins].
         proteins.addAll(tempProteins);
       }
     }
+    // sort the proteins from longest to shortest.
     proteins.sort((b, a) => a.length.compareTo(b.length));
     if (unique) {
+      // If [unique] is `true` only return the unique proteins.
       return proteins.toSet().toList();
     }
     return proteins;
   }
 
   /// Returns the molecular weight (kDA) of this sequence.
-  double molWeight() => this._len * 0.33; // kDa
-
+  double molWeight() => this._len * 0.33;
 }
 
 /// A model representation of a DNA sequence.
@@ -803,23 +897,34 @@ class DNA extends Nucleotides {
     int minSiteLen = 4,
     int maxSiteLen = 8,
   }) {
+    // Fetch a reverse complementary sequence to this sequence.
     String revComp = complementary(rev: true);
 
+    // Fetch all possible combinations of this sequence.
     List<String> origSeqCombos = combinations();
+
+    // Fetch only the combinations whose length is equato to or between [minSiteLen] and [maxSiteLen].
     Iterable<String> seqIter =
         origSeqCombos.where((seq) => (seq.length >= minSiteLen) && (seq.length <= maxSiteLen));
+
+    // Fecth only the unique combinations.
     List<String> restSeqs = seqIter.toSet().toList();
 
     Map<String, List<Map<String, int>>> restSiteSeqs = {};
     List<Map<String, int>> restSiteLocations = [];
 
+    // Loop through each combination.
     for (String restSeq in restSeqs) {
       restSiteLocations = [];
       RegExp regRestExp = RegExp(restSeq);
+      // Find all matches between the combination and the reverse complementary sequence.
       Iterable<RegExpMatch> matches = regRestExp.allMatches(revComp);
+      // Loop through each match.
       for (RegExpMatch match in matches) {
         int startIdx = this.seq.length - (restSeq.length + match.start);
         int endIdx = startIdx + restSeq.length;
+        // Detect palindrome.
+        // Check if the sub-sequence matches the current combination.
         if (this.seq.substring(startIdx, endIdx) == restSeq) {
           restSiteLocations.add({kStartIndex: startIdx, kEndIndex: endIdx});
           restSiteSeqs[restSeq] = restSiteLocations;
@@ -833,7 +938,7 @@ class DNA extends Nucleotides {
   /// Returns the transition-transversion ratio between this sequence and [oSeq].
   double tranRatio({required DNA oSeq}) {
     if (this._len != oSeq._len) {
-      throw ('Unequal Sequence Lengths Error.');
+      Errors.unequalSeqLens(func: 'tranRatio');
     }
 
     int transitionCount = 0;
@@ -841,6 +946,7 @@ class DNA extends Nucleotides {
 
     this.seq.split('').asMap().forEach((idx, nuc) {
       if (nuc != oSeq.seq[idx]) {
+        // 'A' + 'T' => 'AT'
         if (dnaTransitions.contains(nuc + oSeq.seq[idx])) {
           transitionCount++;
         } else if (dnaTransversions.contains(nuc + oSeq.seq[idx])) {
@@ -848,7 +954,8 @@ class DNA extends Nucleotides {
         }
       }
     });
-    return transitionCount / transversionCount;
+    // Cant divide by 0 (inf).
+    return transversionCount == 0 ? -1 : (transitionCount / transversionCount);
   }
 
   /// Returns a `DNA` object with a specified length of [len].
@@ -1434,4 +1541,9 @@ class Peptide extends Sequence {
   }
 }
 
-// void main() {}
+// void main() async {
+//   final fastaData = await Utils.readFASTA(path: '../example_dna_fasta.txt');
+//   DNA dna = new DNA(seq: fastaData.first['seq']!);
+//   dna.toFASTA(outputPath: '../deliverables', filename: 'fasta_output');
+//   dna.report(outputPath: '../', creatorName: 'John Doe', reportTitle: 'Example Report');
+// }
