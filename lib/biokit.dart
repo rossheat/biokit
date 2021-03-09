@@ -1,234 +1,278 @@
+/// BioKit is a Dart package for object-orientated Bioinformatics.
 library biokit;
 
 import 'dart:collection';
-
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+/// @nodoc
 const String kDNA = 'dna';
+
+/// @nodoc
 const String kRNA = 'rna';
+
+/// @nodoc
 const String kPep = 'pep';
+
+/// @nodoc
 const String kAASeq = 'aaSeq';
+
+/// @nodoc
 const String kStartIndex = 'startIndex';
+
+/// @nodoc
 const String kEndIndex = 'endIndex';
+
+/// @nodoc
 const String kMatchCount = 'matchCount';
+
+/// @nodoc
 const String kMatchIndices = 'matchIndices';
+
+/// @nodoc
 const String kMatch = 'match';
+
+/// @nodoc
 const String kSeq = 'seq';
+
+/// @nodoc
 const String kId = 'id';
+
+/// @nodoc
 const String kDesc = 'desc';
 
-class Structs {
-  static const List<String> dnaNucs = ["A", "T", "G", "C"];
-  static const List<String> rnaNucs = ["A", "U", "G", "C"];
-  static const List<String> translationStopCodons = ["UGA", "UAA", "UAG"];
+/// The four DNA nucleotides.
+const List<String> dnaNucs = ["A", "T", "G", "C"];
 
-  static const List<String> aminoAcids = [
-    "F",
-    "S",
-    "Y",
-    "C",
-    "W",
-    "L",
-    "P",
-    "H",
-    "Q",
-    "I",
-    "M",
-    "T",
-    "N",
-    "K",
-    "R",
-    "V",
-    "A",
-    "D",
-    "E",
-    "G",
-    "X" // Stop codon
-  ];
+/// The four RNA nucleotides.
+const List<String> rnaNucs = ["A", "U", "G", "C"];
 
-  static const List<String> dnaTransitions = ['CT', 'TC', 'AG', 'GA'];
-  static const List<String> dnaTransversions = ['GT', 'TG', 'AC', 'CA', 'AT', 'TA', 'GC', 'CG'];
+/// The three translation stop codons.
+const List<String> translationStopCodons = ["UGA", "UAA", "UAG"];
 
-  static const Map<String, String> dnaCompNucs = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'};
-  static const Map<String, String> rnaCompNucs = {'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G'};
+/// The twenty amino acids.
+const List<String> aminoAcids = [
+  "F",
+  "S",
+  "Y",
+  "C",
+  "W",
+  "L",
+  "P",
+  "H",
+  "Q",
+  "I",
+  "M",
+  "T",
+  "N",
+  "K",
+  "R",
+  "V",
+  "A",
+  "D",
+  "E",
+  "G",
+  "X" // Stop codon
+];
 
-  // X = STOP codon
-  static const Map<String, String> dnaCodonToAA = {
-    "TTT": "F",
-    "TTC": "F",
-    "TTA": "L",
-    "TTG": "L",
-    "TCT": "S",
-    "TCC": "S",
-    "TCA": "S",
-    "TCG": "S",
-    "TAT": "Y",
-    "TAC": "Y",
-    "TAA": "X",
-    "TAG": "X",
-    "TGT": "C",
-    "TGC": "C",
-    "TGA": "X",
-    "TGG": "W",
-    "CTT": "L",
-    "CTC": "L",
-    "CTA": "L",
-    "CTG": "L",
-    "CCT": "P",
-    "CCC": "P",
-    "CCA": "P",
-    "CCG": "P",
-    "CAT": "H",
-    "CAC": "H",
-    "CAA": "Q",
-    "CAG": "Q",
-    "CGT": "R",
-    "CGC": "R",
-    "CGA": "R",
-    "CGG": "R",
-    "ATT": "I",
-    "ATC": "I",
-    "ATA": "I",
-    "ATG": "M",
-    "ACT": "T",
-    "ACC": "T",
-    "ACA": "T",
-    "ACG": "T",
-    "AAT": "N",
-    "AAC": "N",
-    "AAA": "K",
-    "AAG": "K",
-    "AGT": "S",
-    "AGC": "S",
-    "AGA": "R",
-    "AGG": "R",
-    "GTT": "V",
-    "GTC": "V",
-    "GTA": "V",
-    "GTG": "V",
-    "GCT": "A",
-    "GCC": "A",
-    "GCA": "A",
-    "GCG": "A",
-    "GAT": "D",
-    "GAC": "D",
-    "GAA": "E",
-    "GAG": "E",
-    "GGT": "G",
-    "GGC": "G",
-    "GGA": "G",
-    "GGG": "G"
-  };
+/// DNA transitions.
+const List<String> dnaTransitions = ['CT', 'TC', 'AG', 'GA'];
 
-  // X = STOP codon
-  static const Map<String, String> rnaCodonToAA = {
-    "UUU": "F",
-    "UUC": "F",
-    "UUA": "L",
-    "UUG": "L",
-    "UCU": "S",
-    "UCC": "S",
-    "UCA": "S",
-    "UCG": "S",
-    "UAU": "Y",
-    "UAC": "Y",
-    "UAA": "X",
-    "UAG": "X",
-    "UGU": "C",
-    "UGC": "C",
-    "UGA": "X",
-    "UGG": "W",
-    "CUU": "L",
-    "CUC": "L",
-    "CUA": "L",
-    "CUG": "L",
-    "CCU": "P",
-    "CCC": "P",
-    "CCA": "P",
-    "CCG": "P",
-    "CAU": "H",
-    "CAC": "H",
-    "CAA": "Q",
-    "CAG": "Q",
-    "CGU": "R",
-    "CGC": "R",
-    "CGA": "R",
-    "CGG": "R",
-    "AUU": "I",
-    "AUC": "I",
-    "AUA": "I",
-    "AUG": "M",
-    "ACU": "T",
-    "ACC": "T",
-    "ACA": "T",
-    "ACG": "T",
-    "AAU": "N",
-    "AAC": "N",
-    "AAA": "K",
-    "AAG": "K",
-    "AGU": "S",
-    "AGC": "S",
-    "AGA": "R",
-    "AGG": "R",
-    "GUU": "V",
-    "GUC": "V",
-    "GUA": "V",
-    "GUG": "V",
-    "GCU": "A",
-    "GCC": "A",
-    "GCA": "A",
-    "GCG": "A",
-    "GAU": "D",
-    "GAC": "D",
-    "GAA": "E",
-    "GAG": "E",
-    "GGU": "G",
-    "GGC": "G",
-    "GGA": "G",
-    "GGG": "G"
-  };
+/// DNA transversions.
+const List<String> dnaTransversions = ['GT', 'TG', 'AC', 'CA', 'AT', 'TA', 'GC', 'CG'];
 
-  // Monoisotopic Mass
-  static const Map<String, double> aaToMonoMass = {
-    "A": 71.03711,
-    "C": 103.00919,
-    "D": 115.02694,
-    "E": 129.04259,
-    "F": 147.06841,
-    "G": 57.02146,
-    "H": 137.05891,
-    "I": 113.08406,
-    "K": 128.09496,
-    "L": 113.08406,
-    "M": 131.04049,
-    "N": 114.04293,
-    "P": 97.05276,
-    "Q": 128.05858,
-    "R": 156.10111,
-    "S": 87.03203,
-    "T": 101.04768,
-    "V": 99.06841,
-    "W": 186.07931,
-    "Y": 163.06333,
-    "X": 0,
-  };
-}
+/// Complementary DNA nucleotides.
+const Map<String, String> dnaCompNucs = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'};
 
+/// Complementary RNA nucelotides.
+const Map<String, String> rnaCompNucs = {'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G'};
+
+/// DNA codons to amino acids.
+///
+/// `"X"` represents the occurance of a stop codon.
+const Map<String, String> dnaCodonToAA = {
+  "TTT": "F",
+  "TTC": "F",
+  "TTA": "L",
+  "TTG": "L",
+  "TCT": "S",
+  "TCC": "S",
+  "TCA": "S",
+  "TCG": "S",
+  "TAT": "Y",
+  "TAC": "Y",
+  "TAA": "X",
+  "TAG": "X",
+  "TGT": "C",
+  "TGC": "C",
+  "TGA": "X",
+  "TGG": "W",
+  "CTT": "L",
+  "CTC": "L",
+  "CTA": "L",
+  "CTG": "L",
+  "CCT": "P",
+  "CCC": "P",
+  "CCA": "P",
+  "CCG": "P",
+  "CAT": "H",
+  "CAC": "H",
+  "CAA": "Q",
+  "CAG": "Q",
+  "CGT": "R",
+  "CGC": "R",
+  "CGA": "R",
+  "CGG": "R",
+  "ATT": "I",
+  "ATC": "I",
+  "ATA": "I",
+  "ATG": "M",
+  "ACT": "T",
+  "ACC": "T",
+  "ACA": "T",
+  "ACG": "T",
+  "AAT": "N",
+  "AAC": "N",
+  "AAA": "K",
+  "AAG": "K",
+  "AGT": "S",
+  "AGC": "S",
+  "AGA": "R",
+  "AGG": "R",
+  "GTT": "V",
+  "GTC": "V",
+  "GTA": "V",
+  "GTG": "V",
+  "GCT": "A",
+  "GCC": "A",
+  "GCA": "A",
+  "GCG": "A",
+  "GAT": "D",
+  "GAC": "D",
+  "GAA": "E",
+  "GAG": "E",
+  "GGT": "G",
+  "GGC": "G",
+  "GGA": "G",
+  "GGG": "G"
+};
+
+/// RNA codons to amino acids.
+///
+/// `"X"` represents the occurance of a stop codon.
+const Map<String, String> rnaCodonToAA = {
+  "UUU": "F",
+  "UUC": "F",
+  "UUA": "L",
+  "UUG": "L",
+  "UCU": "S",
+  "UCC": "S",
+  "UCA": "S",
+  "UCG": "S",
+  "UAU": "Y",
+  "UAC": "Y",
+  "UAA": "X",
+  "UAG": "X",
+  "UGU": "C",
+  "UGC": "C",
+  "UGA": "X",
+  "UGG": "W",
+  "CUU": "L",
+  "CUC": "L",
+  "CUA": "L",
+  "CUG": "L",
+  "CCU": "P",
+  "CCC": "P",
+  "CCA": "P",
+  "CCG": "P",
+  "CAU": "H",
+  "CAC": "H",
+  "CAA": "Q",
+  "CAG": "Q",
+  "CGU": "R",
+  "CGC": "R",
+  "CGA": "R",
+  "CGG": "R",
+  "AUU": "I",
+  "AUC": "I",
+  "AUA": "I",
+  "AUG": "M",
+  "ACU": "T",
+  "ACC": "T",
+  "ACA": "T",
+  "ACG": "T",
+  "AAU": "N",
+  "AAC": "N",
+  "AAA": "K",
+  "AAG": "K",
+  "AGU": "S",
+  "AGC": "S",
+  "AGA": "R",
+  "AGG": "R",
+  "GUU": "V",
+  "GUC": "V",
+  "GUA": "V",
+  "GUG": "V",
+  "GCU": "A",
+  "GCC": "A",
+  "GCA": "A",
+  "GCG": "A",
+  "GAU": "D",
+  "GAC": "D",
+  "GAA": "E",
+  "GAG": "E",
+  "GGU": "G",
+  "GGC": "G",
+  "GGA": "G",
+  "GGG": "G"
+};
+
+// Amino acids their monoisotopic mass.
+const Map<String, double> aaToMonoMass = {
+  "A": 71.03711,
+  "C": 103.00919,
+  "D": 115.02694,
+  "E": 129.04259,
+  "F": 147.06841,
+  "G": 57.02146,
+  "H": 137.05891,
+  "I": 113.08406,
+  "K": 128.09496,
+  "L": 113.08406,
+  "M": 131.04049,
+  "N": 114.04293,
+  "P": 97.05276,
+  "Q": 128.05858,
+  "R": 156.10111,
+  "S": 87.03203,
+  "T": 101.04768,
+  "V": 99.06841,
+  "W": 186.07931,
+  "Y": 163.06333,
+  "X": 0,
+};
+
+/// A collection of error functions.
 class Errors {
+  /// Returns sequence error message.
   static String invalidSeq({required String mon, required int idx, required String type}) {
     return "Invalid ${type.toUpperCase()} Sequence Error. Character '$mon' found at index position $idx (zero-based) is not a valid ${type.toUpperCase()} monomer.";
   }
 
+  /// Returns a sequence type error message.
   static String invalidType({required String type}) {
     return "Invalid Sequence Type Error. '$type' is not a valid sequence type. Please enter the argument 'dna', 'rna' or 'pep' for [type].";
   }
 }
 
+/// A collection of helper functions for bioinformatics.
 class Utils {
+  /// Returns a protein sequence in FASTA format using it's [uniprotId].
+  ///
+  /// Requires network access.
   static Future<String> uniprotIdToFASTA({required String uniprotId}) async {
     Uri uri = Uri.parse('http://www.uniprot.org/uniprot/$uniprotId.fasta');
 
@@ -241,8 +285,19 @@ class Utils {
     return 'Error retrieving protein with uniprot ID $uniprotId';
   }
 
-  static Future<List<Map<String, String>>> readFASTA({required String path}) async {
-    String contents = await File(path).readAsString();
+  /// Returns sequences from either a file [path] or [str] in FASTA format.
+  ///
+  /// Each map contains a sequence `seq`, ID `id`, and description `desc`.
+  static Future<List<Map<String, String>>> readFASTA({String? path, String? str}) async {
+    String contents;
+    if (path != null) {
+      contents = await File(path).readAsString();
+    } else if (str != null) {
+      contents = str;
+    } else {
+      throw ('Invalid readFASTA argument specification. Please specify either a [path] or a [str] in which to read FASTA data from.');
+    }
+
     List<String> lines = contents.split('\n');
     int seqCount = 0;
 
@@ -251,7 +306,6 @@ class Utils {
 
     for (var line in lines) {
       if (line.startsWith('>')) {
-        // Starting new line
         if (seqCount != 0) {
           fastaMaps.add(currentMap);
           currentMap = {};
@@ -272,7 +326,12 @@ class Utils {
     return fastaMaps;
   }
 
-  static String motifToRe({required motif}) {
+  /// Returns a regex valid version of a biological [motif].
+  ///
+  /// ```dart
+  /// motifToRe(motif: 'N{P}[ST]{P}') == 'N[^P][S|T|][^P]'
+  /// ```
+  static String motifToRe({required String motif}) {
     String re = '';
 
     List<String> chars = motif.split('');
@@ -297,14 +356,27 @@ class Utils {
   }
 }
 
+/// A model representation of a biological sequence.
 class Sequence {
+  /// The sequence.
   late final String _seq;
+
+  /// The sequence type.
   late final String _type;
+
+  /// The number of monomers.
   late final int _len;
+
+  /// The name.
   late String _name;
+
+  /// The ID.
   late String _id;
+
+  /// The description.
   late String _desc;
 
+  /// Creates a `Sequence` object.
   Sequence._({required String seq, required String type}) {
     this._type = _validateType(type: type);
     this._seq = _validateSeq(seq: seq);
@@ -313,6 +385,7 @@ class Sequence {
     this._desc = 'Default description';
   }
 
+  /// Validates and returns a sequence [type].
   String _validateType({required String type}) {
     String lType = type.toLowerCase();
     if (![kDNA, kRNA, kPep].contains(lType)) {
@@ -321,24 +394,35 @@ class Sequence {
     return lType;
   }
 
+  /// Validates and returns a [seq].
   String _validateSeq({required String seq}) {
     int seqLen = seq.length;
-    if (seqLen < 6) {
-      throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
+
+    /// Peptides must be at least one monomer long.
+    if (this is Peptide) {
+      if (seqLen < 1) {
+        throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
+      }
+
+      /// Nucleotides must at least 6 monomers long.
+    } else {
+      if (seqLen < 6) {
+        throw ('Invalid Sequence Length Error. Sequence must have 6 or more monomers.');
+      }
     }
 
     String uSeq = seq.toUpperCase();
     uSeq.split('').asMap().forEach((idx, mon) {
       if (this._type == kDNA) {
-        if (!Structs.dnaNucs.contains(mon)) {
+        if (!dnaNucs.contains(mon)) {
           throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
         }
       } else if (this.type == kRNA) {
-        if (!Structs.rnaNucs.contains(mon)) {
+        if (!rnaNucs.contains(mon)) {
           throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
         }
       } else {
-        if (!Structs.aminoAcids.contains(mon)) {
+        if (!aminoAcids.contains(mon)) {
           throw (Errors.invalidSeq(mon: mon, idx: idx, type: this._type));
         }
       }
@@ -347,6 +431,7 @@ class Sequence {
     return uSeq;
   }
 
+  /// Returns the `String` sequence combination between this and [oSeq].
   String operator +(Sequence oSeq) {
     if (this._type != oSeq.type) {
       throw ('Cannot add ${this._type} and ${oSeq.type} sequence.');
@@ -354,6 +439,7 @@ class Sequence {
     return this._seq + oSeq.seq;
   }
 
+  /// Returns information about the this sequence.
   Map<String, dynamic> info() {
     return {
       'seq': seq,
@@ -365,21 +451,29 @@ class Sequence {
     };
   }
 
+  /// Returns a `String` representation of the [info()] function.
   @override
   String toString() => info().toString();
 
+  /// Returns the sequence.
   String get seq => this._seq;
 
+  /// Returns the sequence type.
   String get type => this._type;
 
+  /// Returns the number of monomers in the sequence.
   int get len => this._len;
 
+  /// Returns the sequence name.
   String get name => this._name;
 
+  /// Returns the sequence ID.
   String get id => this._id;
 
+  /// Returns the sequence description.
   String get desc => this._desc;
 
+  /// Sets the sequence name to [newName].
   set name(String newName) {
     if (newName.length < 2 || 25 > newName.length) {
       throw ('Name Length Error. Name must between 2 and 25 characters.');
@@ -387,6 +481,7 @@ class Sequence {
     this._name = newName;
   }
 
+  /// Sets the sequence ID to [newId].
   set id(String newId) {
     if (newId.length < 2 || 30 > newId.length) {
       throw ('ID Length Error. ID must between 2 and 30 characters.');
@@ -394,6 +489,7 @@ class Sequence {
     this._id = newId;
   }
 
+  /// Sets the sequence description to [newDesc].
   set desc(String newDesc) {
     if (newDesc.length < 5 || 100 > newDesc.length) {
       throw ('Description Length Error. Description must between 5 and 100 characters.');
@@ -401,7 +497,10 @@ class Sequence {
     this._desc = newDesc;
   }
 
-  /// Calculates the frequency of each monomer.
+  /// Returns the frequency of each monomer.
+  ///
+  /// Return the percentage total of each monomer by setting [norm] to `true`.
+  /// Inlcude the X 'amino acid' in the count by setting [ignoreStopCodon] to `false`.
   Map<String, double> freq({bool norm = false, bool ignoreStopCodon = true}) {
     Map<String, double> freqMap = {};
     this._seq.split('').forEach((mon) {
@@ -427,7 +526,7 @@ class Sequence {
         return freqMap.map(
           (key, value) => MapEntry(
             key,
-            double.parse(((value / _lenMinusStopAA(stopAA: 'X')) * 100).toStringAsFixed(1)),
+            double.parse(((value / lenMinus(monomer: 'X')) * 100).toStringAsFixed(1)),
           ),
         );
       }
@@ -445,12 +544,15 @@ class Sequence {
     }
   }
 
+  /// Returns the reversed version of this sequence.
   String _reversed({required String seq}) => seq.split('').reversed.join('');
 
-  /// Reverses the sequence.
+  /// Returns the reversed version of this sequence.
   String reverse() => this._seq.split('').reversed.join('');
 
-  /// Every possible comnbination of the sequence.
+  /// Returns every possible combination of this sequence.
+  ///
+  /// Sort the result from longest to shortest by setting [sorted] to `true`.
   List<String> combinations({sorted = false}) {
     List<String> listSeq = this._seq.split("");
     List<String> combinations = [];
@@ -465,14 +567,16 @@ class Sequence {
       }
     }
     if (sorted) {
-      // Sort with longest combination first.
+      /// Sorts with longest combination first.
       combinations.sort((b, a) => a.length.compareTo(b.length));
       return combinations;
     }
     return combinations;
   }
 
-  /// Finds the indices (zero-based) of a specified motif.
+  /// Returns the indices of all [motif] matches.
+  ///
+  /// Prevent overlapping matches by setting [overlap] to `false`.
   Map<String, dynamic> findMotif({required String motif, overlap = true}) {
     List<Map<String, dynamic>> matchData = [];
     Map<String, dynamic> matchMotifMap = {};
@@ -491,7 +595,7 @@ class Sequence {
     return matchMotifMap;
   }
 
-  // The number of positional differences.
+  /// Returns the number of monomer differences between this sequence and [oSeq].
   int difference({required Sequence oSeq}) {
     if (this._len != oSeq.len) {
       throw ('Sequences must be of the same length to calculate difference.');
@@ -509,24 +613,22 @@ class Sequence {
     return differenceCount;
   }
 
-  /// Removes all occurrences of the specified motif.
+  /// Returns this sequence with all occurrences of [motif] removed.
   String splice({required String motif}) {
     String vMotif = _validateSeq(seq: motif);
     return seq.replaceAll(vMotif, '');
   }
 
-  // The longest shared motif.
-  String sharedMotif({required oSeq}) {
+  /// Returns the longest shared motif between this sequence and [oSeq].
+  String sharedMotif({required Sequence oSeq}) {
     if (this._type != oSeq.type) {
       throw ('Cannot find shared motif between ${this._type} and ${oSeq.type} sequence.');
     }
 
-    // Generate all possible combinations.
     List<String> combos = combinations(sorted: true);
 
     String longestShared = '';
 
-    // Find the longest combination that is contained in all sequences.
     for (var comb in combos) {
       bool allMatches = true;
       if (!oSeq.seq.contains(comb)) {
@@ -541,57 +643,46 @@ class Sequence {
     return longestShared;
   }
 
+  /// Returns a number normalized by a [total] to a number of decimal [places].
   double _norm({required int number, required int total, required int places}) =>
       double.parse(((number / total) * 100).toStringAsFixed(1));
 
-  int _lenMinusStopAA({required String stopAA}) {
-    int tempLen = 0;
-    for (var aa in this._seq.split('')) {
-      if (aa != stopAA) {
-        tempLen++;
+  /// Returns the length of this sequence with [monomer] removed.
+  int lenMinus({required String monomer}) {
+    int minusLen = 0;
+    for (var mon in this._seq.split('')) {
+      if (mon != monomer) {
+        minusLen++;
       }
     }
-    return tempLen;
+    return minusLen;
   }
 }
 
+/// A model representation of a nucleotide sequence.
 class Nucleotides extends Sequence {
+  /// Creates a `Nucleotides` object.
   Nucleotides._({required String seq, required String type}) : super._(seq: seq, type: type);
 
-  // /// The frequency of each nucleotide.
-  // Map<String, double> freq({bool norm = false}) => super.freq(norm: norm);
-
-  /// Translates the nucleotides to amino acids.
+  /// Returns the translated version of this sequence.
+  ///
+  /// Return the reverse complementary strand by setting [revComp] to `true`.
+  /// Alter the starting indexing by setting [startIdx].
   Map<String, dynamic> translate({revComp = false, startIdx = 0}) {
     String seq = revComp ? complementary(rev: true) : this.seq;
 
     String aaSeq = '';
     for (var i = startIdx; i < seq.length - 2; i += 3) {
       String codon = seq.substring(i, i + 3);
-      aaSeq += this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
+      aaSeq += this.type == kDNA ? dnaCodonToAA[codon]! : rnaCodonToAA[codon]!;
     }
     return {kAASeq: aaSeq, 'nucCount': seq.length - startIdx - 1, 'aaCount': aaSeq.length};
   }
 
-  /// Calculates the frequency of each codon for a specified amino acid.
-  /// Searches in batches of three nucleotides.
-  /// If a codon is present but does not appear in a batch, it will not be detected.
-  /// For example in ATGTCATGC, only 1 ATG is detected.
-  // Map<String, int> codonFreq({required String aminoAcid}) {
-  //   Map<String, int> codonFreqMap = {};
-  //   for (var i = 0; i < this._len - 2; i += 3) {
-  //     String codon = this.seq.substring(i, i + 3);
-  //     String fetchedAminoAcid =
-  //         this.type == kDNA ? Structs.dnaCodonToAA[codon]! : Structs.rnaCodonToAA[codon]!;
-  //     if (fetchedAminoAcid == aminoAcid.toUpperCase()) {
-  //       codonFreqMap[codon] == null
-  //           ? codonFreqMap[codon] = 1
-  //           : codonFreqMap[codon] = codonFreqMap[codon]! + 1;
-  //     }
-  //   }
-  //   return codonFreqMap;
-  // }
-
+  /// Returns the frequency of a specified [codon].
+  ///
+  /// Scans in batches of three monomers per step.
+  /// The exact [codon] must be present in a batch to be detected.
   int codonFreq({required String codon}) {
     int codonFreq = 0;
     for (var i = 0; i < this._len - 2; i += 3) {
@@ -603,17 +694,19 @@ class Nucleotides extends Sequence {
     return codonFreq;
   }
 
-  /// The complementary strand.
+  /// Returns the complementary strand to this sequence.
+  ///
+  /// Return the reversed complementary strand by setting [rev] to `true`.
   String complementary({bool rev = false}) {
     String compSeq = this
         .seq
         .split('')
-        .map((nuc) => this.type == kDNA ? Structs.dnaCompNucs[nuc] : Structs.rnaCompNucs[nuc])
+        .map((nuc) => this.type == kDNA ? dnaCompNucs[nuc] : rnaCompNucs[nuc])
         .join();
     return rev ? super._reversed(seq: compSeq) : compSeq;
   }
 
-  /// The percentage of nucleotides which are either Guanine or Cytosine.
+  /// Returns the percentage of Guanine and Cytosine nucleotides in this sequence.
   double gcContent() {
     int gcCount = 0;
     this.seq.split('').forEach((nuc) {
@@ -626,7 +719,7 @@ class Nucleotides extends Sequence {
     );
   }
 
-  /// Generates 6 ORFs, 3 forward, 3 reversed.
+  /// Returns six reading frames from this sequence.
   List<String> readingFrames() {
     List<String> readingFrames = [];
 
@@ -637,6 +730,9 @@ class Nucleotides extends Sequence {
     return readingFrames;
   }
 
+  /// Returns protein sequences from a single [aaSeq] sequence.
+  ///
+  /// Commonly used after generating [readingFrames()].
   List<String> readingFrameToProteins({required String aaSeq}) {
     List<String> currentProtein = [];
     List<String> proteins = [];
@@ -661,6 +757,7 @@ class Nucleotides extends Sequence {
     return proteins;
   }
 
+  /// Returns proteins from this sequence.
   List<String> proteins({bool unique = false}) {
     List<String> frames = readingFrames();
     List<String> proteins = [];
@@ -677,21 +774,31 @@ class Nucleotides extends Sequence {
     return proteins;
   }
 
+  /// Returns the molecular weight (kDA) of this sequence.
   double molWeight() => this._len * 0.33; // kDa
 
-  double doubleHelixMolWeight() => molWeight() * 2; // kDa
-
-  double doubleHexlixTurns() => this._len / 10; // turns
-
-  double doubleHelixGeoLen() => this._len * 0.34; //nm
 }
 
+/// A model representation of a DNA sequence.
 class DNA extends Nucleotides {
+  /// Creates a `DNA` object.
   DNA({required String seq}) : super._(seq: seq, type: 'dna');
 
-  /// Transcribes DNA to RNA.
+  /// Returns the molecular weight (kDA) of this sequence if it were in double helical form.
+  double doubleHelixMolWeight() => molWeight() * 2;
+
+  /// Returns the number of turns in this sequence if it were in double helical form.
+  double doubleHexlixTurns() => this._len / 10;
+
+  /// Returns the length (nm) of this sequence if it were in double helical form.
+  double doubleHelixGeoLen() => this._len * 0.34;
+
+  /// Returns the transcribed version of this sequence.
   String transcribe() => this.seq.replaceAll('T', 'U');
 
+  /// Returns the restriction sites of this sequence.
+  ///
+  /// Alter the length of the restriction sites by modifying [minSiteLen] and [maxSiteLen].
   Map<String, List<Map<String, int>>> restrictionSites({
     int minSiteLen = 4,
     int maxSiteLen = 8,
@@ -723,6 +830,7 @@ class DNA extends Nucleotides {
     return restSiteSeqs;
   }
 
+  /// Returns the transition-transversion ratio between this sequence and [oSeq].
   double tranRatio({required DNA oSeq}) {
     if (this._len != oSeq._len) {
       throw ('Unequal Sequence Lengths Error.');
@@ -733,9 +841,9 @@ class DNA extends Nucleotides {
 
     this.seq.split('').asMap().forEach((idx, nuc) {
       if (nuc != oSeq.seq[idx]) {
-        if (Structs.dnaTransitions.contains(nuc + oSeq.seq[idx])) {
+        if (dnaTransitions.contains(nuc + oSeq.seq[idx])) {
           transitionCount++;
-        } else if (Structs.dnaTransversions.contains(nuc + oSeq.seq[idx])) {
+        } else if (dnaTransversions.contains(nuc + oSeq.seq[idx])) {
           transversionCount++;
         }
       }
@@ -743,9 +851,10 @@ class DNA extends Nucleotides {
     return transitionCount / transversionCount;
   }
 
+  /// Returns a `DNA` object with a specified length of [len].
   static DNA random({required int len}) {
     Random _rand = Random();
-    String dnaNucsStr = Structs.dnaNucs.join();
+    String dnaNucsStr = dnaNucs.join();
     String seq = String.fromCharCodes(
       Iterable.generate(
         len,
@@ -757,10 +866,23 @@ class DNA extends Nucleotides {
     return DNA(seq: seq);
   }
 
+  /// Generates and saves a DNA analysis report to [outputPath].
+  ///
+  /// Add your name to the report by setting [creatorName].
+  /// Add a title to the report  by setting [reportTitle].
+  ///
+  /// ```dart
+  /// DNA dna = DNA(seq: 'ATGCGA');
+  /// dna.report(outputPath: '../deliverables', reportTitle: 'My Report', creatorName: 'John Doe');
+  /// ```
   Future<void> report(
       {required String outputPath,
       required String creatorName,
       required String reportTitle}) async {
+    _genReport(outputPath, creatorName, reportTitle);
+  }
+
+  Future<void> _genReport(outputPath, creatorName, reportTitle) async {
     final DateTime now = new DateTime.now();
     final DateTime date = new DateTime(now.year, now.month, now.day);
 
@@ -833,7 +955,7 @@ class DNA extends Nucleotides {
       'Monoisotopic Mass (kDa)',
     ];
     var peptideTopTableData = [
-      pep._lenMinusStopAA(stopAA: 'X'),
+      pep.lenMinus(monomer: 'X'),
       pep.monoMass(roundTo: 1, kDa: true),
     ];
 
@@ -1253,15 +1375,18 @@ class DNA extends Nucleotides {
   }
 }
 
+/// A model representation of a RNA sequence.
 class RNA extends Nucleotides {
+  /// Creates a `RNA` object.
   RNA({required String seq}) : super._(seq: seq, type: 'rna');
 
-  /// Transcribe RNA back to DNA.
+  /// Returns the reverse-transcribed version of this sequence.
   String revTranscribe() => this.seq.replaceAll('U', 'T');
 
+  /// Returns a `RNA` object with a specified length of [len].
   static RNA random({required int len}) {
     Random _rand = Random();
-    String rnaNucsStr = Structs.rnaNucs.join();
+    String rnaNucsStr = rnaNucs.join();
     String seq = String.fromCharCodes(
       Iterable.generate(
         len,
@@ -1274,14 +1399,18 @@ class RNA extends Nucleotides {
   }
 }
 
+/// A model representation of a peptide sequence.
 class Peptide extends Sequence {
   Peptide({required String seq}) : super._(seq: seq, type: 'pep');
 
-  /// Calculate the Monoisotopic Mass.
+  /// Returns the monoisotopic mass (Da) of this sequence.
+  ///
+  /// Use [roundTo] to specify the number of decimal places.
+  /// Return the result in units of kDa by setting [kDa] to `true`.
   double monoMass({int roundTo = 3, kDa = false}) {
     double totalMonoMass = 0;
     for (var aa in this.seq.split('')) {
-      totalMonoMass += Structs.aaToMonoMass[aa]!;
+      totalMonoMass += aaToMonoMass[aa]!;
     }
     if (kDa) {
       return double.parse((totalMonoMass / 1000).toStringAsFixed(roundTo));
@@ -1289,9 +1418,10 @@ class Peptide extends Sequence {
     return double.parse(totalMonoMass.toStringAsFixed(roundTo));
   }
 
+  /// Returns a `Peptide` object with a specified length of [len].
   static Peptide random({required int len}) {
     Random _rand = Random();
-    String aminoAcidsStr = Structs.aminoAcids.join();
+    String aminoAcidsStr = aminoAcids.join();
     String seq = String.fromCharCodes(
       Iterable.generate(
         len,
@@ -1304,12 +1434,4 @@ class Peptide extends Sequence {
   }
 }
 
-void main() async {
-  // List<Map<String, String>> dnaSeqs = await Utils.readFASTA(path: 'example_dna_fasta.txt');
-  // DNA dna = DNA(seq: dnaSeqs.first['seq']!);
-  // dna.report(
-  //   outputPath: '../deliverables',
-  //   reportTitle: 'DNA Analysis Report',
-  //   creatorName: 'John Doe',
-  // );
-}
+// void main() {}

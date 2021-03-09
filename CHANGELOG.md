@@ -1,3 +1,6 @@
+## [0.0.6] - 2021-03-09
+* Decomposed Structs class.
+
 ## [0.0.5] - 2021-03-08
 * Added report function.
 
