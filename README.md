@@ -1,4 +1,4 @@
-<div style="text-align:center"><img src="https://biokit.org/img/banner.png" /></div>
+<div style="text-align:center"><img src="https://biokit.org/img/logobannerwhite.png" /></div>
 
 BioKit is a Dart package for Bioinformatics.
 
