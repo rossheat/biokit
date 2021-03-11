@@ -21,7 +21,7 @@ const String kPep = 'pep';
 const String kAASeq = 'aaSeq';
 
 /// @nodoc
-const String kStartIndex = 'startIndex';
+const String kStartIndex = 'startIdx';
 
 /// @nodoc
 const String kEndIndex = 'endIndex';
@@ -292,6 +292,10 @@ class Errors {
       throw ('$param must have $min or more characters.');
     }
   }
+
+  static void invalidCodonLen() {
+    throw ('Codon must be three characters long.');
+  }
 }
 
 /// A collection of helper functions for bioinformatics.
@@ -343,7 +347,7 @@ class Utils {
         List<String> topLineList = topLine.split(' ');
 
         currentMap[kId] = topLineList.first;
-        currentMap[kDesc] = topLineList.sublist(1, topLineList.length).join();
+        currentMap[kDesc] = topLineList.sublist(1, topLineList.length).join(" ");
       } else {
         currentMap[kSeq] = currentMap[kSeq]! + line;
       }
@@ -403,12 +407,12 @@ class Sequence {
   late String _desc;
 
   /// Creates a `Sequence` object.
-  Sequence._({required String seq, required String type}) {
+  Sequence._({required String seq, required String type, String? name, String? id, String? desc}) {
     this._type = _validateType(type: type);
     this._seq = _validateSeq(seq: seq);
-    this._name = 'Default name';
-    this._id = 'Default ID';
-    this._desc = 'Default description';
+    this.name = name ?? 'Default Name';
+    this.id = id ?? 'Default ID';
+    this.desc = desc ?? 'Default description';
   }
 
   /// Validates and returns a sequence [type].
@@ -503,7 +507,7 @@ class Sequence {
 
   /// Sets the sequence name to [newName].
   set name(String newName) {
-    if (newName.length < 2 || 25 > newName.length) {
+    if (newName.length < 2 || 25 < newName.length) {
       Errors.invalidSeqLen(param: 'Name', min: 2, max: 25);
     }
     this._name = newName;
@@ -511,7 +515,7 @@ class Sequence {
 
   /// Sets the sequence ID to [newId].
   set id(String newId) {
-    if (newId.length < 2 || 30 > newId.length) {
+    if (newId.length < 2 || 30 < newId.length) {
       Errors.invalidSeqLen(param: 'ID', min: 2, max: 30);
     }
     this._id = newId;
@@ -519,7 +523,7 @@ class Sequence {
 
   /// Sets the sequence description to [newDesc].
   set desc(String newDesc) {
-    if (newDesc.length < 5 || 100 > newDesc.length) {
+    if (newDesc.length < 5 || 100 < newDesc.length) {
       Errors.invalidSeqLen(param: 'Description', min: 5, max: 100);
     }
     this._desc = newDesc;
@@ -528,14 +532,14 @@ class Sequence {
   /// Returns the frequency of each monomer.
   ///
   /// Return the percentage total of each monomer by setting [norm] to `true`.
-  /// Inlcude the X 'amino acid' in the count by setting [ignoreStopCodon] to `false`.
-  Map<String, double> freq({bool norm = false, bool ignoreStopCodon = true}) {
+  /// Exclude the X 'amino acid' in the count by setting [ignoreStopAA] to `true`.
+  Map<String, double> freq({bool norm = false, bool ignoreStopAA = false}) {
     Map<String, double> freqMap = {};
     this._seq.split('').forEach((mon) {
-      // If this is a peptide and [ignoreStopCodon] is `true`, we want
+      // If this is a Peptide and [ignoreStopAA] is `true`, we want
       // to perform the calulation without taking the stop codon product
       // X into consideration.
-      if (this is Peptide && ignoreStopCodon) {
+      if (this is Peptide && ignoreStopAA) {
         if (mon != 'X') {
           if (freqMap.containsKey(mon)) {
             freqMap[mon] = freqMap[mon]! + 1;
@@ -543,7 +547,7 @@ class Sequence {
             freqMap[mon] = 1;
           }
         }
-        // If either this is not a Peptide or [ignoreStopCodon] is `false`,
+        // If either this is not a Peptide or [ignoreStopAA] is `false`,
         // then proceed without checking if the character is X.
       } else {
         if (freqMap.containsKey(mon)) {
@@ -554,9 +558,9 @@ class Sequence {
       }
     });
 
-    if (this is Peptide && ignoreStopCodon) {
+    if (this is Peptide && ignoreStopAA) {
       if (norm) {
-        // The sequence is a Peptide and [ignoreStopCodon] is `true` and [norm] is `true`.
+        // The sequence is a Peptide and [ignoreStopAA] is `true` and [norm] is `true`.
         // Return normalised results based on length without the X character.
         return freqMap.map(
           (key, value) => MapEntry(
@@ -566,7 +570,7 @@ class Sequence {
           ),
         );
       }
-      // The sequence is not a Peptide or [ignoreStopCodon] is `false`.
+      // The sequence is not a Peptide or [ignoreStopAA] is `false`.
     } else {
       if (norm) {
         // Return normalised results based on sequence length.
@@ -578,7 +582,7 @@ class Sequence {
         );
       }
     }
-    // The sequence is not a Peptide or [ignoreStopCodon] is `false`, or [norm] is `false`.
+    // The sequence is not a Peptide or [ignoreStopAA] is `false`, or [norm] is `false`.
     // Return non-normalised results based on sequence length.
     return freqMap;
   }
@@ -666,10 +670,7 @@ class Sequence {
   }
 
   /// Returns this sequence with all occurrences of [motif] removed.
-  String splice({required String motif}) {
-    String vMotif = _validateSeq(seq: motif);
-    return seq.replaceAll(vMotif, '');
-  }
+  String splice({required String motif}) => seq.replaceAll(motif, '');
 
   /// Returns the longest shared motif between this sequence and [oSeq].
   String sharedMotif({required Sequence oSeq}) {
@@ -687,7 +688,6 @@ class Sequence {
       if (!oSeq.seq.contains(comb)) {
         // The combination is not contained in the other sequence.
         isMatch = false;
-        break;
       }
       if (isMatch) {
         // The combination must be present in the other sequence.
@@ -718,9 +718,9 @@ class Sequence {
   /// Saves this sequence to a local file in FASTA format.
   ///
   /// ```dart
-  /// dna.toFASTA(outputPath: '../deliverables', filename: 'fasta_output');
+  /// dna.toFASTA(path: '../deliverables', filename: 'fasta_output');
   /// ```
-  Future<void> toFASTA({required String outputPath, required String filename}) async {
+  Future<void> toFASTA({required String path, required String filename}) async {
     final String metadata = '>${this._id} ${this._desc}\n';
     String seq = '';
     int lineLen = 0;
@@ -736,22 +736,23 @@ class Sequence {
     }
     final String fileData = metadata + seq;
     final String filen = filename.toLowerCase().trim();
-    await File('$outputPath/$filen.txt').writeAsString(fileData);
+    await File('$path/$filen.txt').writeAsString(fileData);
   }
 }
 
 /// A model representation of a nucleotide sequence.
 class Nucleotides extends Sequence {
   /// Creates a `Nucleotides` object.
-  Nucleotides._({required String seq, required String type}) : super._(seq: seq, type: type);
+  Nucleotides._({required String seq, required String type, String? name, String? id, String? desc})
+      : super._(seq: seq, type: type, name: name, id: id, desc: desc);
 
   /// Returns the translated version of this sequence.
   ///
-  /// Return the reverse complementary strand by setting [revComp] to `true`.
+  /// Return the reverse complementary strand by setting [rev] to `true`.
   /// Alter the starting indexing by setting [startIdx].
-  Map<String, dynamic> translate({revComp = false, startIdx = 0}) {
-    // If [revComp] is `true`, return the reverse complementary sequence to this sequence.
-    String seq = revComp ? complementary(rev: true) : this.seq;
+  Map<String, dynamic> translate({rev = false, startIdx = 0}) {
+    // If [rev] is `true`, return the reverse complementary sequence to this sequence.
+    String seq = rev ? complementary(rev: true) : this.seq;
 
     String aaSeq = '';
     // Loop through the sequence in batches of three characters at a time.
@@ -767,8 +768,12 @@ class Nucleotides extends Sequence {
   /// Returns the frequency of a specified [codon].
   ///
   /// Scans in batches of three monomers per step.
-  /// The exact [codon] must be present in a batch to be detected.
+  /// The exact [codon] must be present in the batch in order to be detected.
   int codonFreq({required String codon}) {
+    if (codon.length != 3) {
+      Errors.invalidCodonLen();
+    }
+
     int codonFreq = 0;
     // Loop through the sequence in batches of three characters at a time.
     for (var i = 0; i < this._len - 2; i += 3) {
@@ -807,14 +812,14 @@ class Nucleotides extends Sequence {
   }
 
   /// Returns six reading frames from this sequence.
-  List<String> readingFrames() {
+  List<String> _readingFrames() {
     List<String> readingFrames = [];
 
     for (var i = 0; i < 3; i++) {
       // Generate three forwards reading frames.
       readingFrames.add(translate(startIdx: i)[kAASeq]);
       // Generate three backwards reading frames.
-      readingFrames.add(translate(revComp: true, startIdx: i)[kAASeq]);
+      readingFrames.add(translate(rev: true, startIdx: i)[kAASeq]);
     }
     return readingFrames;
   }
@@ -822,7 +827,7 @@ class Nucleotides extends Sequence {
   /// Returns protein sequences from a single [aaSeq] sequence.
   ///
   /// Commonly used after generating [readingFrames()].
-  List<String> readingFrameToProteins({required String aaSeq}) {
+  List<String> _readingFrameToProteins({required String aaSeq}) {
     List<String> currentProtein = [];
     List<String> proteins = [];
 
@@ -849,12 +854,12 @@ class Nucleotides extends Sequence {
   /// Returns proteins from this sequence.
   List<String> proteins({bool unique = false}) {
     // Generate siz reading frames from this sequence.
-    List<String> frames = readingFrames();
+    List<String> frames = _readingFrames();
     List<String> proteins = [];
     // Loop through each of the six reading frames.
     for (var frame in frames) {
       // Translate the reading frame into protein(s).
-      List<String> tempProteins = readingFrameToProteins(aaSeq: frame);
+      List<String> tempProteins = _readingFrameToProteins(aaSeq: frame);
       if (proteins != []) {
         // If atleast one protein has been generated, at it/them to [proteins].
         proteins.addAll(tempProteins);
@@ -870,25 +875,31 @@ class Nucleotides extends Sequence {
   }
 
   /// Returns the molecular weight (kDA) of this sequence.
-  double molWeight() => this._len * 0.33;
+  double _molWeight() => this._len * 0.33;
 }
 
 /// A model representation of a DNA sequence.
 class DNA extends Nucleotides {
   /// Creates a `DNA` object.
-  DNA({required String seq}) : super._(seq: seq, type: 'dna');
+  DNA({required String seq, String? name, String? id, String? desc})
+      : super._(seq: seq, type: 'dna', name: name, id: id, desc: desc);
 
   /// Returns the molecular weight (kDA) of this sequence if it were in double helical form.
-  double doubleHelixMolWeight() => molWeight() * 2;
+  double _doubleHelixMolWeight() => _molWeight() * 2;
 
   /// Returns the number of turns in this sequence if it were in double helical form.
-  double doubleHexlixTurns() => this._len / 10;
+  double dHelixTurns() => this._len / 10;
 
   /// Returns the length (nm) of this sequence if it were in double helical form.
-  double doubleHelixGeoLen() => this._len * 0.34;
+  double dHelixGeoLen() => this._len * 0.34;
 
   /// Returns the transcribed version of this sequence.
-  String transcribe() => this.seq.replaceAll('T', 'U');
+  String transcribe({int? startIdx}) {
+    if (startIdx != null) {
+      return this.seq.substring(startIdx).replaceAll('T', 'U');
+    }
+    return this.seq.replaceAll('T', 'U');
+  }
 
   /// Returns the restriction sites of this sequence.
   ///
@@ -935,7 +946,7 @@ class DNA extends Nucleotides {
     return restSiteSeqs;
   }
 
-  /// Returns the transition-transversion ratio between this sequence and [oSeq].
+  /// Returns the transition/transversion ratio between this sequence and [oSeq].
   double tranRatio({required DNA oSeq}) {
     if (this._len != oSeq._len) {
       Errors.unequalSeqLens(func: 'tranRatio');
@@ -946,7 +957,7 @@ class DNA extends Nucleotides {
 
     this.seq.split('').asMap().forEach((idx, nuc) {
       if (nuc != oSeq.seq[idx]) {
-        // 'A' + 'T' => 'AT'
+        // 'A' + 'T' => 'AT'.
         if (dnaTransitions.contains(nuc + oSeq.seq[idx])) {
           transitionCount++;
         } else if (dnaTransversions.contains(nuc + oSeq.seq[idx])) {
@@ -955,7 +966,8 @@ class DNA extends Nucleotides {
       }
     });
     // Cant divide by 0 (inf).
-    return transversionCount == 0 ? -1 : (transitionCount / transversionCount);
+    final double result = transversionCount == 0 ? -1 : (transitionCount / transversionCount);
+    return double.parse(result.toStringAsFixed(2));
   }
 
   /// Returns a `DNA` object with a specified length of [len].
@@ -973,31 +985,30 @@ class DNA extends Nucleotides {
     return DNA(seq: seq);
   }
 
-  /// Generates and saves a DNA analysis report to [outputPath].
+  /// Generates and saves a DNA analysis report to [path].
   ///
-  /// Add your name to the report by setting [creatorName].
-  /// Add a title to the report  by setting [reportTitle].
+  /// Add your name to the report by setting [creator].
+  /// Add a title to the report  by setting [title].
   ///
   /// ```dart
   /// DNA dna = DNA(seq: 'ATGCGA');
-  /// dna.report(outputPath: '../deliverables', reportTitle: 'My Report', creatorName: 'John Doe');
+  /// dna.report(path: '../deliverables', title: 'My Report', creator: 'John Doe');
   /// ```
   Future<void> report(
-      {required String outputPath,
-      required String creatorName,
-      required String reportTitle}) async {
-    _genReport(outputPath, creatorName, reportTitle);
+      {required String path, required String creator, required String title}) async {
+    _genReport(path, creator, title);
   }
 
+  /// @nodoc
   Future<void> _genReport(outputPath, creatorName, reportTitle) async {
     final DateTime now = new DateTime.now();
     final DateTime date = new DateTime(now.year, now.month, now.day);
 
     final int monomers = this._len;
     final double gcCon = gcContent();
-    final double mWeight = molWeight();
-    final double turns = doubleHexlixTurns();
-    final double geoLength = doubleHelixGeoLen();
+    final double mWeight = _molWeight();
+    final double turns = dHelixTurns();
+    final double geoLength = dHelixGeoLen();
     final Map nucFreqCount = freq();
     final Map nucFreqPerc = freq(norm: true);
 
@@ -1063,10 +1074,10 @@ class DNA extends Nucleotides {
     ];
     var peptideTopTableData = [
       pep.lenMinus(monomer: 'X'),
-      pep.monoMass(roundTo: 1, kDa: true),
+      pep.monoMass(decimals: 1, kDa: true),
     ];
 
-    Map<String, double> aaFreq = pep.freq();
+    Map<String, double> aaFreq = pep.freq(ignoreStopAA: true);
     Map<String, double> aaFreqPct = pep.freq(norm: true);
 
     var sortedKeys = aaFreq.keys.toList(growable: false)
@@ -1508,21 +1519,22 @@ class RNA extends Nucleotides {
 
 /// A model representation of a peptide sequence.
 class Peptide extends Sequence {
-  Peptide({required String seq}) : super._(seq: seq, type: 'pep');
+  Peptide({required String seq, String? name, String? id, String? desc})
+      : super._(seq: seq, type: 'pep', name: name, id: id, desc: desc);
 
   /// Returns the monoisotopic mass (Da) of this sequence.
   ///
-  /// Use [roundTo] to specify the number of decimal places.
+  /// Use [decimals] to specify the number of decimal places.
   /// Return the result in units of kDa by setting [kDa] to `true`.
-  double monoMass({int roundTo = 3, kDa = false}) {
+  double monoMass({int decimals = 2, kDa = false}) {
     double totalMonoMass = 0;
     for (var aa in this.seq.split('')) {
       totalMonoMass += aaToMonoMass[aa]!;
     }
     if (kDa) {
-      return double.parse((totalMonoMass / 1000).toStringAsFixed(roundTo));
+      return double.parse((totalMonoMass / 1000).toStringAsFixed(decimals));
     }
-    return double.parse(totalMonoMass.toStringAsFixed(roundTo));
+    return double.parse(totalMonoMass.toStringAsFixed(decimals));
   }
 
   /// Returns a `Peptide` object with a specified length of [len].
@@ -1540,10 +1552,3 @@ class Peptide extends Sequence {
     return Peptide(seq: seq);
   }
 }
-
-// void main() async {
-//   final fastaData = await Utils.readFASTA(path: '../example_dna_fasta.txt');
-//   DNA dna = new DNA(seq: fastaData.first['seq']!);
-//   dna.toFASTA(outputPath: '../deliverables', filename: 'fasta_output');
-//   dna.report(outputPath: '../', creatorName: 'John Doe', reportTitle: 'Example Report');
-// }
